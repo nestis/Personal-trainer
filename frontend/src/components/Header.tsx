@@ -36,11 +36,35 @@ const styles: Record<string, React.CSSProperties> = {
     cursor: 'pointer',
     textDecoration: 'none',
   },
+  nav: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 12,
+  },
+  navLink: {
+    fontSize: '0.85rem',
+    fontWeight: 600,
+    color: 'var(--text-secondary)',
+    textDecoration: 'none',
+    padding: '6px 12px',
+    borderRadius: 'var(--radius-sm)',
+    transition: 'all 0.2s',
+  },
+  navLinkActive: {
+    fontSize: '0.85rem',
+    fontWeight: 600,
+    color: 'var(--accent)',
+    textDecoration: 'none',
+    padding: '6px 12px',
+    borderRadius: 'var(--radius-sm)',
+    background: 'rgba(233, 69, 96, 0.1)',
+  },
 };
 
 function Header() {
   const location = useLocation();
   const isHome = location.pathname === '/';
+  const isRecords = location.pathname === '/records';
 
   return (
     <header style={styles.header}>
@@ -48,11 +72,19 @@ function Header() {
         <Link to="/" style={{ textDecoration: 'none' }}>
           <span style={styles.title}>Workout Tracker</span>
         </Link>
-        {isHome && (
-          <Link to="/new" style={styles.addBtn}>
-            +
+        <div style={styles.nav}>
+          <Link
+            to="/records"
+            style={isRecords ? styles.navLinkActive : styles.navLink}
+          >
+            PRs
           </Link>
-        )}
+          {isHome && (
+            <Link to="/new" style={styles.addBtn}>
+              +
+            </Link>
+          )}
+        </div>
       </div>
     </header>
   );

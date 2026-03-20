@@ -1,4 +1,4 @@
-import { Session } from '../types';
+import { Session, StrengthPR, WodRecord } from '../types';
 
 const API_BASE = import.meta.env.VITE_API_URL || '/api';
 const API_KEY = import.meta.env.VITE_API_KEY || '';
@@ -51,5 +51,13 @@ export const api = {
 
   deleteSession(id: string): Promise<void> {
     return request(`/sessions/${id}`, { method: 'DELETE' });
+  },
+
+  getStrengthPRs(): Promise<StrengthPR[]> {
+    return request('/records/strength');
+  },
+
+  getWodRecords(): Promise<WodRecord[]> {
+    return request('/records/wods');
   },
 };

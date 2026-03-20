@@ -12,10 +12,34 @@ export interface Exercise {
 }
 
 export interface WOD {
+  name?: string; // Named WODs (e.g., 'Fran', 'Murph') for time record tracking
   description: string;
   timeSeconds?: number;
   avgHeartRate?: number;
   maxHeartRate?: number;
+}
+
+export interface StrengthPR {
+  exercise: string;
+  reps: number;
+  kilos: number;
+  estimated1RM: number;
+  date: string;
+  sessionId: string;
+}
+
+export interface WodRecord {
+  name: string;
+  bestTimeSeconds: number;
+  avgHeartRate?: number;
+  maxHeartRate?: number;
+  date: string;
+  sessionId: string;
+  history: {
+    timeSeconds: number;
+    date: string;
+    sessionId: string;
+  }[];
 }
 
 export type SessionStatus = 'planned' | 'completed';

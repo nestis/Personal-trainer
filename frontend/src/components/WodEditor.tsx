@@ -32,6 +32,16 @@ function parseTime(value: string): number {
 function WodEditor({ wod, onChange, readOnly }: Props) {
   return (
     <div className="card">
+      <div style={{ marginBottom: 12 }}>
+        <label className="label">WOD Name (optional — for tracking records)</label>
+        <input
+          className="input"
+          placeholder="e.g., Fran, Murph, Fight Gone Bad..."
+          value={wod.name || ''}
+          onChange={(e) => onChange({ ...wod, name: e.target.value || undefined })}
+          readOnly={readOnly}
+        />
+      </div>
       <label className="label">WOD Description</label>
       <textarea
         className="input"
