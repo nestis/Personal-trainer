@@ -15,6 +15,7 @@ export interface WOD {
   name?: string;
   description: string;
   timeSeconds?: number;
+  totalReps?: number;
   avgHeartRate?: number;
   maxHeartRate?: number;
 }
@@ -74,6 +75,7 @@ export interface ManualWodRecord {
   name: string;
   description?: string;
   timeSeconds: number;
+  totalReps?: number;
   avgHeartRate?: number;
   maxHeartRate?: number;
   date: string;

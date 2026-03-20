@@ -57,6 +57,7 @@ export async function createManualWodRecord(input: {
   name: string;
   description?: string;
   timeSeconds: number;
+  totalReps?: number;
   avgHeartRate?: number;
   maxHeartRate?: number;
   date: string;
@@ -69,6 +70,7 @@ export async function createManualWodRecord(input: {
     name: input.name,
     description: input.description,
     timeSeconds: input.timeSeconds,
+    totalReps: input.totalReps,
     avgHeartRate: input.avgHeartRate,
     maxHeartRate: input.maxHeartRate,
     date: input.date,

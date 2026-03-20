@@ -9,7 +9,7 @@ interface Props {
 const s: Record<string, React.CSSProperties> = {
   grid: {
     display: 'grid',
-    gridTemplateColumns: '1fr 1fr 1fr',
+    gridTemplateColumns: '1fr 1fr',
     gap: 10,
     marginTop: 14,
   },
@@ -64,6 +64,20 @@ function WodEditor({ wod, onChange, readOnly }: Props) {
             value={wod.timeSeconds ? formatTime(wod.timeSeconds) : ''}
             onChange={(e) =>
               onChange({ ...wod, timeSeconds: parseTime(e.target.value) })
+            }
+            readOnly={readOnly}
+          />
+        </div>
+        <div>
+          <label className="label">Reps</label>
+          <input
+            className="input input-sm"
+            type="number"
+            inputMode="numeric"
+            placeholder="0"
+            value={wod.totalReps || ''}
+            onChange={(e) =>
+              onChange({ ...wod, totalReps: parseInt(e.target.value) || undefined })
             }
             readOnly={readOnly}
           />

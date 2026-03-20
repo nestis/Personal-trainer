@@ -15,6 +15,7 @@ export interface WOD {
   name?: string; // Named WODs (e.g., 'Fran', 'Murph') for time record tracking
   description: string;
   timeSeconds?: number;
+  totalReps?: number;
   avgHeartRate?: number;
   maxHeartRate?: number;
 }
@@ -90,6 +91,7 @@ export interface ManualWodRecord {
   name: string;
   description?: string;
   timeSeconds: number;
+  totalReps?: number;
   avgHeartRate?: number;
   maxHeartRate?: number;
   date: string;

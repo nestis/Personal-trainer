@@ -280,6 +280,7 @@ function Records() {
   const [wName, setWName] = useState('');
   const [wDescription, setWDescription] = useState('');
   const [wTime, setWTime] = useState('');
+  const [wReps, setWReps] = useState('');
   const [wAvgHR, setWAvgHR] = useState('');
   const [wMaxHR, setWMaxHR] = useState('');
   const [wDate, setWDate] = useState(() => new Date().toISOString().split('T')[0]);
@@ -323,12 +324,13 @@ function Records() {
       await api.createManualWodRecord({
         name: wName, description: wDescription || undefined,
         timeSeconds: parseTime(wTime),
+        totalReps: wReps ? parseInt(wReps) : undefined,
         avgHeartRate: wAvgHR ? parseInt(wAvgHR) : undefined,
         maxHeartRate: wMaxHR ? parseInt(wMaxHR) : undefined,
         date: wDate, notes: wNotes || undefined,
       });
       setWName(''); setWDescription(''); setWTime('');
-      setWAvgHR(''); setWMaxHR(''); setWNotes('');
+      setWReps(''); setWAvgHR(''); setWMaxHR(''); setWNotes('');
       setShowWodForm(false);
       loadData();
     } catch (err) {
@@ -513,6 +515,7 @@ function Records() {
                 {r.description && <div style={s.wodDesc}>{r.description}</div>}
                 <div style={s.wodMeta}>
                   <span>{formatDate(r.date)}</span>
+                  {r.totalReps && <span>{r.totalReps} reps</span>}
                   {r.avgHeartRate && <span>Avg {r.avgHeartRate} bpm</span>}
                   {r.maxHeartRate && <span>Max {r.maxHeartRate} bpm</span>}
                 </div>
@@ -538,6 +541,10 @@ function Records() {
                 <div style={s.formField}>
                   <label className="label">Time (m:ss)</label>
                   <input className="input input-sm" placeholder="3:30" value={wTime} onChange={(e) => setWTime(e.target.value)} />
+                </div>
+                <div style={s.formField}>
+                  <label className="label">Reps</label>
+                  <input className="input input-sm" type="number" inputMode="numeric" placeholder="0" value={wReps} onChange={(e) => setWReps(e.target.value)} />
                 </div>
                 <div style={s.formField}>
                   <label className="label">Date</label>

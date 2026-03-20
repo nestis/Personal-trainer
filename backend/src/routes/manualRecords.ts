@@ -39,13 +39,13 @@ router.post('/strength', async (req: Request, res: Response) => {
 // Create a manual WOD record
 router.post('/wod', async (req: Request, res: Response) => {
   try {
-    const { name, description, timeSeconds, avgHeartRate, maxHeartRate, date, notes } = req.body;
+    const { name, description, timeSeconds, totalReps, avgHeartRate, maxHeartRate, date, notes } = req.body;
     if (!name || !timeSeconds || !date) {
       res.status(400).json({ error: 'name, timeSeconds, and date are required' });
       return;
     }
     const record = await createManualWodRecord({
-      name, description, timeSeconds, avgHeartRate, maxHeartRate, date, notes,
+      name, description, timeSeconds, totalReps, avgHeartRate, maxHeartRate, date, notes,
     });
     res.status(201).json(record);
   } catch (error) {

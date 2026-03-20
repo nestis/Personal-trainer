@@ -84,6 +84,7 @@ export const api = {
     name: string;
     description?: string;
     timeSeconds: number;
+    totalReps?: number;
     avgHeartRate?: number;
     maxHeartRate?: number;
     date: string;
