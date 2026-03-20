@@ -11,7 +11,11 @@ const router = Router();
 // List manual records (optional ?type=strength|wod)
 router.get('/', async (req: Request, res: Response) => {
   try {
-    const type = req.query.type as 'strength' | 'wod' | undefined;
+    const type = req.query.type as string | undefined;
+    if (type !== undefined && type !== 'strength' && type !== 'wod') {
+      res.status(400).json({ error: 'type must be "strength" or "wod"' });
+      return;
+    }
     const records = await listManualRecords(type);
     res.json(records);
   } catch (error) {
@@ -24,8 +28,16 @@ router.get('/', async (req: Request, res: Response) => {
 router.post('/strength', async (req: Request, res: Response) => {
   try {
     const { exercise, reps, kilos, date, notes } = req.body;
-    if (!exercise || !reps || !kilos || !date) {
+    if (!exercise || !date) {
       res.status(400).json({ error: 'exercise, reps, kilos, and date are required' });
+      return;
+    }
+    if (typeof reps !== 'number' || reps <= 0) {
+      res.status(400).json({ error: 'reps must be a positive number' });
+      return;
+    }
+    if (typeof kilos !== 'number' || kilos <= 0) {
+      res.status(400).json({ error: 'kilos must be a positive number' });
       return;
     }
     const record = await createManualStrengthPR({ exercise, reps, kilos, date, notes });
@@ -40,8 +52,12 @@ router.post('/strength', async (req: Request, res: Response) => {
 router.post('/wod', async (req: Request, res: Response) => {
   try {
     const { name, description, timeSeconds, totalReps, avgHeartRate, maxHeartRate, date, notes } = req.body;
-    if (!name || !timeSeconds || !date) {
+    if (!name || !date) {
       res.status(400).json({ error: 'name, timeSeconds, and date are required' });
+      return;
+    }
+    if (typeof timeSeconds !== 'number' || timeSeconds <= 0) {
+      res.status(400).json({ error: 'timeSeconds must be a positive number' });
       return;
     }
     const record = await createManualWodRecord({

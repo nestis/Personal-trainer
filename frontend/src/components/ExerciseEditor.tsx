@@ -153,16 +153,18 @@ function ExerciseEditor({ exercises, onChange, readOnly }: Props) {
       {exercises.map((exercise, exIndex) => (
         <div key={exercise.id} className="card" style={s.exercise}>
           <div style={s.exerciseHeader}>
-            <input
-              className="input"
-              style={s.nameInput}
-              placeholder="Exercise name"
-              value={exercise.name}
-              onChange={(e) =>
-                updateExercise(exIndex, { ...exercise, name: e.target.value })
-              }
-              readOnly={readOnly}
-            />
+            <label className="label" style={{ flex: 1, margin: 0 }}>
+              <input
+                className="input"
+                style={s.nameInput}
+                placeholder="Exercise name"
+                value={exercise.name}
+                onChange={(e) =>
+                  updateExercise(exIndex, { ...exercise, name: e.target.value })
+                }
+                readOnly={readOnly}
+              />
+            </label>
             {!readOnly && (
               <button
                 style={s.removeExBtn}

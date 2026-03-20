@@ -1,23 +1,35 @@
 import { Session, StrengthPR, WodRecord } from '../types';
 import { listSessions } from './dynamodb';
+import { estimate1RM } from '../utils/formulas';
 
-// Epley formula: 1RM = weight × (1 + reps / 30)
-function estimate1RM(kilos: number, reps: number): number {
-  if (reps === 1) return kilos;
-  return Math.round(kilos * (1 + reps / 30) * 10) / 10;
-}
-
-export async function getStrengthPRs(): Promise<StrengthPR[]> {
-  const sessions = await listSessions();
+export async function getAllRecords(
+  prefetchedSessions?: Session[]
+): Promise<{ strengthPRs: StrengthPR[]; wodRecords: WodRecord[] }> {
+  const sessions = prefetchedSessions ?? await listSessions();
   const completedSessions = sessions.filter((s) => s.status === 'completed');
 
-  // Map: "exercise|reps" -> best record
+  const strengthPRs = computeStrengthPRs(completedSessions);
+  const wodRecords = computeWodRecords(completedSessions);
+
+  return { strengthPRs, wodRecords };
+}
+
+function computeStrengthPRs(completedSessions: Session[]): StrengthPR[] {
+  // Map: "normalizedName|reps" -> best record
   const prMap = new Map<string, StrengthPR>();
+  // Track the first-seen display name per normalized exercise name
+  const displayNames = new Map<string, string>();
 
   for (const session of completedSessions) {
     for (const exercise of session.strength) {
       if (!exercise.name) continue;
       const normalizedName = exercise.name.trim().toLowerCase();
+
+      // Keep the first-seen display name for consistent casing
+      if (!displayNames.has(normalizedName)) {
+        displayNames.set(normalizedName, exercise.name.trim());
+      }
+      const displayName = displayNames.get(normalizedName)!;
 
       for (const set of exercise.sets) {
         if (!set.completed || set.kilos <= 0) continue;
@@ -27,7 +39,7 @@ export async function getStrengthPRs(): Promise<StrengthPR[]> {
 
         if (!existing || set.kilos > existing.kilos) {
           prMap.set(key, {
-            exercise: exercise.name.trim(),
+            exercise: displayName,
             reps: set.reps,
             kilos: set.kilos,
             estimated1RM: estimate1RM(set.kilos, set.reps),
@@ -50,10 +62,7 @@ export async function getStrengthPRs(): Promise<StrengthPR[]> {
   return prs;
 }
 
-export async function getWodRecords(): Promise<WodRecord[]> {
-  const sessions = await listSessions();
-  const completedSessions = sessions.filter((s) => s.status === 'completed');
-
+function computeWodRecords(completedSessions: Session[]): WodRecord[] {
   // Map: normalized wod name -> all entries
   const wodMap = new Map<string, {
     name: string;
@@ -104,4 +113,14 @@ export async function getWodRecords(): Promise<WodRecord[]> {
   records.sort((a, b) => a.name.toLowerCase().localeCompare(b.name.toLowerCase()));
 
   return records;
+}
+
+export async function getStrengthPRs(prefetchedSessions?: Session[]): Promise<StrengthPR[]> {
+  const { strengthPRs } = await getAllRecords(prefetchedSessions);
+  return strengthPRs;
+}
+
+export async function getWodRecords(prefetchedSessions?: Session[]): Promise<WodRecord[]> {
+  const { wodRecords } = await getAllRecords(prefetchedSessions);
+  return wodRecords;
 }

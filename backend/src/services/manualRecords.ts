@@ -1,6 +1,4 @@
-import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import {
-  DynamoDBDocumentClient,
   PutCommand,
   GetCommand,
   DeleteCommand,
@@ -8,22 +6,10 @@ import {
 } from '@aws-sdk/lib-dynamodb';
 import { ManualRecord, ManualStrengthPR, ManualWodRecord } from '../types';
 import { v4 as uuidv4 } from 'uuid';
+import { docClient } from './db-client';
+import { estimate1RM } from '../utils/formulas';
 
-const client = new DynamoDBClient({
-  region: process.env.AWS_REGION || 'eu-west-1',
-  ...(process.env.DYNAMODB_ENDPOINT && {
-    endpoint: process.env.DYNAMODB_ENDPOINT,
-  }),
-});
-
-const docClient = DynamoDBDocumentClient.from(client);
 const TABLE_NAME = process.env.RECORDS_TABLE || 'ManualRecords';
-
-// Epley formula: 1RM = weight x (1 + reps / 30)
-function estimate1RM(kilos: number, reps: number): number {
-  if (reps === 1) return kilos;
-  return Math.round(kilos * (1 + reps / 30) * 10) / 10;
-}
 
 export async function createManualStrengthPR(input: {
   exercise: string;
@@ -41,7 +27,7 @@ export async function createManualStrengthPR(input: {
     kilos: input.kilos,
     estimated1RM: estimate1RM(input.kilos, input.reps),
     date: input.date,
-    notes: input.notes,
+    ...(input.notes !== undefined && { notes: input.notes }),
     createdAt: now,
     updatedAt: now,
   };
@@ -68,13 +54,13 @@ export async function createManualWodRecord(input: {
     id: uuidv4(),
     type: 'wod',
     name: input.name,
-    description: input.description,
+    ...(input.description !== undefined && { description: input.description }),
     timeSeconds: input.timeSeconds,
-    totalReps: input.totalReps,
-    avgHeartRate: input.avgHeartRate,
-    maxHeartRate: input.maxHeartRate,
+    ...(input.totalReps !== undefined && { totalReps: input.totalReps }),
+    ...(input.avgHeartRate !== undefined && { avgHeartRate: input.avgHeartRate }),
+    ...(input.maxHeartRate !== undefined && { maxHeartRate: input.maxHeartRate }),
     date: input.date,
-    notes: input.notes,
+    ...(input.notes !== undefined && { notes: input.notes }),
     createdAt: now,
     updatedAt: now,
   };
@@ -94,13 +80,25 @@ export async function getManualRecord(id: string): Promise<ManualRecord | null> 
 }
 
 export async function deleteManualRecord(id: string): Promise<boolean> {
-  const existing = await getManualRecord(id);
-  if (!existing) return false;
-
-  await docClient.send(
-    new DeleteCommand({ TableName: TABLE_NAME, Key: { id } })
-  );
-  return true;
+  try {
+    await docClient.send(
+      new DeleteCommand({
+        TableName: TABLE_NAME,
+        Key: { id },
+        ConditionExpression: 'attribute_exists(id)',
+        ReturnValues: 'ALL_OLD',
+      })
+    );
+    return true;
+  } catch (error: unknown) {
+    if (
+      error instanceof Error &&
+      error.name === 'ConditionalCheckFailedException'
+    ) {
+      return false;
+    }
+    throw error;
+  }
 }
 
 export async function listManualRecords(type?: 'strength' | 'wod'): Promise<ManualRecord[]> {

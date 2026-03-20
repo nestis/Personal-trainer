@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { StrengthPR, WodRecord, ManualStrengthPR, ManualWodRecord, ManualRecord } from '../types';
 import { api } from '../services/api';
+import { formatTime, parseTime, formatDate } from '../utils/format';
 
 const s: Record<string, React.CSSProperties> = {
   page: {
@@ -231,25 +232,6 @@ const s: Record<string, React.CSSProperties> = {
   },
 };
 
-function formatTime(totalSeconds: number): string {
-  const mins = Math.floor(totalSeconds / 60);
-  const secs = totalSeconds % 60;
-  return `${mins}:${secs.toString().padStart(2, '0')}`;
-}
-
-function parseTime(value: string): number {
-  const parts = value.split(':');
-  if (parts.length === 2) {
-    return (parseInt(parts[0]) || 0) * 60 + (parseInt(parts[1]) || 0);
-  }
-  return parseInt(value) || 0;
-}
-
-function formatDate(dateStr: string): string {
-  const date = new Date(dateStr + 'T00:00:00');
-  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: '2-digit' });
-}
-
 function groupByExercise<T extends { exercise: string }>(items: T[]): Map<string, T[]> {
   const map = new Map<string, T[]>();
   for (const item of items) {
@@ -261,91 +243,127 @@ function groupByExercise<T extends { exercise: string }>(items: T[]): Map<string
   return map;
 }
 
+interface StrengthFormState {
+  exercise: string;
+  reps: string;
+  kilos: string;
+  date: string;
+  notes: string;
+}
+
+interface WodFormState {
+  name: string;
+  desc: string;
+  time: string;
+  reps: string;
+  date: string;
+  avgHR: string;
+  maxHR: string;
+  notes: string;
+}
+
 function Records() {
+  const today = new Date().toISOString().split('T')[0];
+
   const [tab, setTab] = useState<'strength' | 'wods'>('strength');
   const [strengthPRs, setStrengthPRs] = useState<StrengthPR[]>([]);
   const [wodRecords, setWodRecords] = useState<WodRecord[]>([]);
   const [manualRecords, setManualRecords] = useState<ManualRecord[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [showStrengthForm, setShowStrengthForm] = useState(false);
   const [showWodForm, setShowWodForm] = useState(false);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
-  const [sExercise, setSExercise] = useState('');
-  const [sReps, setSReps] = useState('');
-  const [sKilos, setSKilos] = useState('');
-  const [sDate, setSDate] = useState(() => new Date().toISOString().split('T')[0]);
-  const [sNotes, setSNotes] = useState('');
+  const [strengthForm, setStrengthForm] = useState<StrengthFormState>({ exercise: '', reps: '', kilos: '', date: today, notes: '' });
+  const [wodForm, setWodForm] = useState<WodFormState>({ name: '', desc: '', time: '', reps: '', date: today, avgHR: '', maxHR: '', notes: '' });
   const [sSaving, setSSaving] = useState(false);
-
-  const [wName, setWName] = useState('');
-  const [wDescription, setWDescription] = useState('');
-  const [wTime, setWTime] = useState('');
-  const [wReps, setWReps] = useState('');
-  const [wAvgHR, setWAvgHR] = useState('');
-  const [wMaxHR, setWMaxHR] = useState('');
-  const [wDate, setWDate] = useState(() => new Date().toISOString().split('T')[0]);
-  const [wNotes, setWNotes] = useState('');
   const [wSaving, setWSaving] = useState(false);
+
+  useEffect(() => {
+    document.title = 'Records - Workout Tracker';
+  }, []);
 
   const loadData = () => {
     setLoading(true);
+    setError(null);
     Promise.all([api.getStrengthPRs(), api.getWodRecords(), api.listManualRecords()])
       .then(([prs, wods, manual]) => {
         setStrengthPRs(prs);
         setWodRecords(wods);
         setManualRecords(manual);
       })
-      .catch((err) => console.error('Failed to load records:', err))
+      .catch((err) => {
+        console.error('Failed to load records:', err);
+        setError(err.message || 'Failed to load records.');
+      })
       .finally(() => setLoading(false));
+  };
+
+  const reloadManualRecords = () => {
+    api.listManualRecords()
+      .then(setManualRecords)
+      .catch((err) => console.error('Failed to reload manual records:', err));
   };
 
   useEffect(() => { loadData(); }, []);
 
   const handleAddStrengthPR = async () => {
-    if (!sExercise || !sReps || !sKilos) return;
+    if (!strengthForm.exercise || !strengthForm.reps || !strengthForm.kilos) return;
     setSSaving(true);
     try {
       await api.createManualStrengthPR({
-        exercise: sExercise, reps: parseInt(sReps), kilos: parseFloat(sKilos),
-        date: sDate, notes: sNotes || undefined,
+        exercise: strengthForm.exercise, reps: parseInt(strengthForm.reps), kilos: parseFloat(strengthForm.kilos),
+        date: strengthForm.date, notes: strengthForm.notes || undefined,
       });
-      setSExercise(''); setSReps(''); setSKilos(''); setSNotes('');
+      setStrengthForm({ exercise: '', reps: '', kilos: '', date: today, notes: '' });
       setShowStrengthForm(false);
-      loadData();
+      reloadManualRecords();
     } catch (err) {
       console.error('Failed to add strength PR:', err);
     } finally { setSSaving(false); }
   };
 
   const handleAddWodRecord = async () => {
-    if (!wName || !wTime) return;
+    if (!wodForm.name || !wodForm.time) return;
     setWSaving(true);
     try {
       await api.createManualWodRecord({
-        name: wName, description: wDescription || undefined,
-        timeSeconds: parseTime(wTime),
-        totalReps: wReps ? parseInt(wReps) : undefined,
-        avgHeartRate: wAvgHR ? parseInt(wAvgHR) : undefined,
-        maxHeartRate: wMaxHR ? parseInt(wMaxHR) : undefined,
-        date: wDate, notes: wNotes || undefined,
+        name: wodForm.name, description: wodForm.desc || undefined,
+        timeSeconds: parseTime(wodForm.time),
+        totalReps: wodForm.reps ? parseInt(wodForm.reps) : undefined,
+        avgHeartRate: wodForm.avgHR ? parseInt(wodForm.avgHR) : undefined,
+        maxHeartRate: wodForm.maxHR ? parseInt(wodForm.maxHR) : undefined,
+        date: wodForm.date, notes: wodForm.notes || undefined,
       });
-      setWName(''); setWDescription(''); setWTime('');
-      setWReps(''); setWAvgHR(''); setWMaxHR(''); setWNotes('');
+      setWodForm({ name: '', desc: '', time: '', reps: '', date: today, avgHR: '', maxHR: '', notes: '' });
       setShowWodForm(false);
-      loadData();
+      reloadManualRecords();
     } catch (err) {
       console.error('Failed to add WOD record:', err);
     } finally { setWSaving(false); }
   };
 
   const handleDeleteManual = async (id: string) => {
-    if (!confirm('Delete this record?')) return;
-    try { await api.deleteManualRecord(id); loadData(); }
+    try { await api.deleteManualRecord(id); setConfirmDeleteId(null); reloadManualRecords(); }
     catch (err) { console.error('Failed to delete record:', err); }
   };
 
   if (loading) {
     return <div style={s.loading}>Loading...</div>;
+  }
+
+  if (error) {
+    return (
+      <div style={{ textAlign: 'center', padding: '80px 20px' }} className="fade-in">
+        <div className="card" style={{ background: 'rgba(255,69,58,0.12)', color: 'var(--red)' }}>
+          {error}
+        </div>
+        <button className="btn btn-primary" onClick={loadData} style={{ marginTop: 16 }}>
+          Retry
+        </button>
+      </div>
+    );
   }
 
   const grouped = groupByExercise(strengthPRs);
@@ -371,7 +389,7 @@ function Records() {
         </button>
       </div>
 
-      {/* ─── STRENGTH ────────────────────────────────────── */}
+      {/* STRENGTH */}
       {tab === 'strength' && (
         <>
           {strengthPRs.length > 0 && (
@@ -418,7 +436,14 @@ function Records() {
                           {r.notes && <div style={s.note}>{r.notes}</div>}
                         </span>
                         <span style={s.dateSmall}>{formatDate(r.date)}</span>
-                        <button style={s.delBtn} onClick={() => handleDeleteManual(r.id)}>-</button>
+                        {confirmDeleteId === r.id ? (
+                          <span style={{ display: 'flex', gap: 4 }}>
+                            <button style={s.delBtn} onClick={() => handleDeleteManual(r.id)} aria-label="Delete record">Yes</button>
+                            <button style={{ ...s.delBtn, color: 'var(--text-secondary)' }} onClick={() => setConfirmDeleteId(null)}>No</button>
+                          </span>
+                        ) : (
+                          <button style={s.delBtn} onClick={() => setConfirmDeleteId(r.id)} aria-label="Delete record">-</button>
+                        )}
                       </div>
                     </div>
                   ))}
@@ -434,29 +459,29 @@ function Records() {
               <div style={s.formTitle}>New Strength PR</div>
               <div style={{ marginBottom: 10 }}>
                 <label className="label">Exercise</label>
-                <input className="input" placeholder="e.g., Bench Press" value={sExercise} onChange={(e) => setSExercise(e.target.value)} />
+                <input className="input" placeholder="e.g., Bench Press" value={strengthForm.exercise} onChange={(e) => setStrengthForm({ ...strengthForm, exercise: e.target.value })} />
               </div>
               <div style={s.formRow}>
                 <div style={s.formField}>
                   <label className="label">Reps</label>
-                  <input className="input input-sm" type="number" inputMode="numeric" placeholder="5" value={sReps} onChange={(e) => setSReps(e.target.value)} />
+                  <input className="input input-sm" type="number" inputMode="numeric" placeholder="5" value={strengthForm.reps} onChange={(e) => setStrengthForm({ ...strengthForm, reps: e.target.value })} />
                 </div>
                 <div style={s.formField}>
                   <label className="label">Kg</label>
-                  <input className="input input-sm" type="number" inputMode="decimal" placeholder="100" value={sKilos} onChange={(e) => setSKilos(e.target.value)} />
+                  <input className="input input-sm" type="number" inputMode="decimal" placeholder="100" value={strengthForm.kilos} onChange={(e) => setStrengthForm({ ...strengthForm, kilos: e.target.value })} />
                 </div>
                 <div style={s.formField}>
                   <label className="label">Date</label>
-                  <input className="input input-sm" type="date" value={sDate} onChange={(e) => setSDate(e.target.value)} />
+                  <input className="input input-sm" type="date" value={strengthForm.date} onChange={(e) => setStrengthForm({ ...strengthForm, date: e.target.value })} />
                 </div>
               </div>
               <div style={{ marginBottom: 4 }}>
                 <label className="label">Notes</label>
-                <input className="input input-sm" placeholder="Optional" value={sNotes} onChange={(e) => setSNotes(e.target.value)} />
+                <input className="input input-sm" placeholder="Optional" value={strengthForm.notes} onChange={(e) => setStrengthForm({ ...strengthForm, notes: e.target.value })} />
               </div>
               <div style={s.formActions}>
                 <button className="btn btn-secondary btn-sm" onClick={() => setShowStrengthForm(false)} style={{ flex: 1 }}>Cancel</button>
-                <button className="btn btn-primary btn-sm" onClick={handleAddStrengthPR} disabled={sSaving || !sExercise || !sReps || !sKilos} style={{ flex: 2 }}>
+                <button className="btn btn-primary btn-sm" onClick={handleAddStrengthPR} disabled={sSaving || !strengthForm.exercise || !strengthForm.reps || !strengthForm.kilos} style={{ flex: 2 }}>
                   {sSaving ? 'Saving...' : 'Save'}
                 </button>
               </div>
@@ -467,7 +492,7 @@ function Records() {
         </>
       )}
 
-      {/* ─── WODs ─────────────────────────────────────────── */}
+      {/* WODs */}
       {tab === 'wods' && (
         <>
           {wodRecords.length > 0 && (
@@ -485,10 +510,10 @@ function Records() {
                   {record.history.length > 1 && (
                     <>
                       <div style={s.histLabel}>History</div>
-                      {record.history.map((entry, i) => (
-                        <div key={i} style={s.histRow}>
+                      {record.history.map((entry) => (
+                        <div key={`${entry.date}-${entry.sessionId}`} style={s.histRow}>
                           <span>{formatDate(entry.date)}</span>
-                          <span style={i === 0 ? { color: 'var(--tint)', fontWeight: 600 } : undefined}>
+                          <span>
                             {formatTime(entry.timeSeconds)}
                           </span>
                         </div>
@@ -510,7 +535,14 @@ function Records() {
                     <div style={s.wodName}>{r.name}</div>
                     <div style={s.wodTime}>{formatTime(r.timeSeconds)}</div>
                   </div>
-                  <button style={s.delBtn} onClick={() => handleDeleteManual(r.id)}>-</button>
+                  {confirmDeleteId === r.id ? (
+                    <span style={{ display: 'flex', gap: 8 }}>
+                      <button style={s.delBtn} onClick={() => handleDeleteManual(r.id)} aria-label="Delete record">Delete</button>
+                      <button style={{ ...s.delBtn, color: 'var(--text-secondary)' }} onClick={() => setConfirmDeleteId(null)}>Cancel</button>
+                    </span>
+                  ) : (
+                    <button style={s.delBtn} onClick={() => setConfirmDeleteId(r.id)} aria-label="Delete record">-</button>
+                  )}
                 </div>
                 {r.description && <div style={s.wodDesc}>{r.description}</div>}
                 <div style={s.wodMeta}>
@@ -531,43 +563,43 @@ function Records() {
               <div style={s.formTitle}>New WOD Record</div>
               <div style={{ marginBottom: 10 }}>
                 <label className="label">WOD Name</label>
-                <input className="input" placeholder="e.g., Fran" value={wName} onChange={(e) => setWName(e.target.value)} />
+                <input className="input" placeholder="e.g., Fran" value={wodForm.name} onChange={(e) => setWodForm({ ...wodForm, name: e.target.value })} />
               </div>
               <div style={{ marginBottom: 10 }}>
                 <label className="label">Description</label>
-                <textarea className="input" placeholder="21-15-9 Thrusters & Pull-ups..." value={wDescription} onChange={(e) => setWDescription(e.target.value)} rows={2} />
+                <textarea className="input" placeholder="21-15-9 Thrusters & Pull-ups..." value={wodForm.desc} onChange={(e) => setWodForm({ ...wodForm, desc: e.target.value })} rows={2} />
               </div>
               <div style={s.formRow}>
                 <div style={s.formField}>
                   <label className="label">Time (m:ss)</label>
-                  <input className="input input-sm" placeholder="3:30" value={wTime} onChange={(e) => setWTime(e.target.value)} />
+                  <input className="input input-sm" placeholder="3:30" value={wodForm.time} onChange={(e) => setWodForm({ ...wodForm, time: e.target.value })} />
                 </div>
                 <div style={s.formField}>
                   <label className="label">Reps</label>
-                  <input className="input input-sm" type="number" inputMode="numeric" placeholder="0" value={wReps} onChange={(e) => setWReps(e.target.value)} />
+                  <input className="input input-sm" type="number" inputMode="numeric" placeholder="0" value={wodForm.reps} onChange={(e) => setWodForm({ ...wodForm, reps: e.target.value })} />
                 </div>
                 <div style={s.formField}>
                   <label className="label">Date</label>
-                  <input className="input input-sm" type="date" value={wDate} onChange={(e) => setWDate(e.target.value)} />
+                  <input className="input input-sm" type="date" value={wodForm.date} onChange={(e) => setWodForm({ ...wodForm, date: e.target.value })} />
                 </div>
               </div>
               <div style={s.formRow}>
                 <div style={s.formField}>
                   <label className="label">Avg HR</label>
-                  <input className="input input-sm" type="number" inputMode="numeric" placeholder="bpm" value={wAvgHR} onChange={(e) => setWAvgHR(e.target.value)} />
+                  <input className="input input-sm" type="number" inputMode="numeric" placeholder="bpm" value={wodForm.avgHR} onChange={(e) => setWodForm({ ...wodForm, avgHR: e.target.value })} />
                 </div>
                 <div style={s.formField}>
                   <label className="label">Max HR</label>
-                  <input className="input input-sm" type="number" inputMode="numeric" placeholder="bpm" value={wMaxHR} onChange={(e) => setWMaxHR(e.target.value)} />
+                  <input className="input input-sm" type="number" inputMode="numeric" placeholder="bpm" value={wodForm.maxHR} onChange={(e) => setWodForm({ ...wodForm, maxHR: e.target.value })} />
                 </div>
               </div>
               <div style={{ marginBottom: 4 }}>
                 <label className="label">Notes</label>
-                <input className="input input-sm" placeholder="Optional" value={wNotes} onChange={(e) => setWNotes(e.target.value)} />
+                <input className="input input-sm" placeholder="Optional" value={wodForm.notes} onChange={(e) => setWodForm({ ...wodForm, notes: e.target.value })} />
               </div>
               <div style={s.formActions}>
                 <button className="btn btn-secondary btn-sm" onClick={() => setShowWodForm(false)} style={{ flex: 1 }}>Cancel</button>
-                <button className="btn btn-primary btn-sm" onClick={handleAddWodRecord} disabled={wSaving || !wName || !wTime} style={{ flex: 2 }}>
+                <button className="btn btn-primary btn-sm" onClick={handleAddWodRecord} disabled={wSaving || !wodForm.name || !wodForm.time} style={{ flex: 2 }}>
                   {wSaving ? 'Saving...' : 'Save'}
                 </button>
               </div>

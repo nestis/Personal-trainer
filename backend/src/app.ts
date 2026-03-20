@@ -7,12 +7,15 @@ import manualRecordsRouter from './routes/manualRecords';
 
 const app = express();
 
-app.use(cors());
-app.use(express.json());
+// CORS: Using origin: true reflects the request origin back in the
+// Access-Control-Allow-Origin header. This is acceptable for a single-user
+// app behind CloudFront where the domain is dynamic.
+app.use(cors({ origin: true }));
+app.use(express.json({ limit: '100kb' }));
 
 // Health check (no auth)
 app.get('/health', (_req, res) => {
-  res.json({ status: 'ok' });
+  res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
 // All routes require API key

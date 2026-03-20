@@ -1,4 +1,5 @@
 import { WOD } from '../types';
+import { formatTime, parseTime } from '../utils/format';
 
 interface Props {
   wod: WOD;
@@ -15,100 +16,92 @@ const s: Record<string, React.CSSProperties> = {
   },
 };
 
-function formatTime(totalSeconds: number): string {
-  const mins = Math.floor(totalSeconds / 60);
-  const secs = totalSeconds % 60;
-  return `${mins}:${secs.toString().padStart(2, '0')}`;
-}
-
-function parseTime(value: string): number {
-  const parts = value.split(':');
-  if (parts.length === 2) {
-    return (parseInt(parts[0]) || 0) * 60 + (parseInt(parts[1]) || 0);
-  }
-  return parseInt(value) || 0;
-}
-
 function WodEditor({ wod, onChange, readOnly }: Props) {
   return (
     <div className="card">
       <div style={{ marginBottom: 14 }}>
-        <label className="label">WOD Name</label>
-        <input
-          className="input"
-          placeholder="e.g., Fran, Murph..."
-          value={wod.name || ''}
-          onChange={(e) => onChange({ ...wod, name: e.target.value || undefined })}
-          readOnly={readOnly}
-        />
+        <label className="label">WOD Name
+          <input
+            className="input"
+            placeholder="e.g., Fran, Murph..."
+            value={wod.name || ''}
+            onChange={(e) => onChange({ ...wod, name: e.target.value || undefined })}
+            readOnly={readOnly}
+          />
+        </label>
       </div>
 
       <div>
-        <label className="label">Description</label>
-        <textarea
-          className="input"
-          value={wod.description}
-          placeholder="Describe the WOD..."
-          onChange={(e) => onChange({ ...wod, description: e.target.value })}
-          readOnly={readOnly}
-          rows={3}
-        />
+        <label className="label">Description
+          <textarea
+            className="input"
+            value={wod.description}
+            placeholder="Describe the WOD..."
+            onChange={(e) => onChange({ ...wod, description: e.target.value })}
+            readOnly={readOnly}
+            rows={3}
+          />
+        </label>
       </div>
 
       <div style={s.grid}>
         <div>
-          <label className="label">Time</label>
-          <input
-            className="input input-sm"
-            placeholder="m:ss"
-            value={wod.timeSeconds ? formatTime(wod.timeSeconds) : ''}
-            onChange={(e) =>
-              onChange({ ...wod, timeSeconds: parseTime(e.target.value) })
-            }
-            readOnly={readOnly}
-          />
+          <label className="label">Time
+            <input
+              className="input input-sm"
+              placeholder="m:ss"
+              value={wod.timeSeconds ? formatTime(wod.timeSeconds) : ''}
+              onChange={(e) =>
+                onChange({ ...wod, timeSeconds: parseTime(e.target.value) })
+              }
+              readOnly={readOnly}
+            />
+          </label>
         </div>
         <div>
-          <label className="label">Reps</label>
-          <input
-            className="input input-sm"
-            type="number"
-            inputMode="numeric"
-            placeholder="0"
-            value={wod.totalReps || ''}
-            onChange={(e) =>
-              onChange({ ...wod, totalReps: parseInt(e.target.value) || undefined })
-            }
-            readOnly={readOnly}
-          />
+          <label className="label">Reps
+            <input
+              className="input input-sm"
+              type="number"
+              inputMode="numeric"
+              placeholder="0"
+              value={wod.totalReps || ''}
+              onChange={(e) =>
+                onChange({ ...wod, totalReps: parseInt(e.target.value) || undefined })
+              }
+              readOnly={readOnly}
+            />
+          </label>
         </div>
         <div>
-          <label className="label">Avg HR</label>
-          <input
-            className="input input-sm"
-            type="number"
-            inputMode="numeric"
-            placeholder="bpm"
-            value={wod.avgHeartRate || ''}
-            onChange={(e) =>
-              onChange({ ...wod, avgHeartRate: parseInt(e.target.value) || undefined })
-            }
-            readOnly={readOnly}
-          />
+          <label className="label">Avg HR
+            <input
+              className="input input-sm"
+              type="number"
+              inputMode="numeric"
+              placeholder="bpm"
+              value={wod.avgHeartRate || ''}
+              onChange={(e) =>
+                onChange({ ...wod, avgHeartRate: parseInt(e.target.value) || undefined })
+              }
+              readOnly={readOnly}
+            />
+          </label>
         </div>
         <div>
-          <label className="label">Max HR</label>
-          <input
-            className="input input-sm"
-            type="number"
-            inputMode="numeric"
-            placeholder="bpm"
-            value={wod.maxHeartRate || ''}
-            onChange={(e) =>
-              onChange({ ...wod, maxHeartRate: parseInt(e.target.value) || undefined })
-            }
-            readOnly={readOnly}
-          />
+          <label className="label">Max HR
+            <input
+              className="input input-sm"
+              type="number"
+              inputMode="numeric"
+              placeholder="bpm"
+              value={wod.maxHeartRate || ''}
+              onChange={(e) =>
+                onChange({ ...wod, maxHeartRate: parseInt(e.target.value) || undefined })
+              }
+              readOnly={readOnly}
+            />
+          </label>
         </div>
       </div>
     </div>

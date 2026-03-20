@@ -1,23 +1,13 @@
-import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import {
-  DynamoDBDocumentClient,
   PutCommand,
   GetCommand,
-  UpdateCommand,
   DeleteCommand,
-  QueryCommand,
+  ScanCommand,
 } from '@aws-sdk/lib-dynamodb';
 import { Session, CreateSessionInput, UpdateSessionInput } from '../types';
 import { v4 as uuidv4 } from 'uuid';
+import { docClient } from './db-client';
 
-const client = new DynamoDBClient({
-  region: process.env.AWS_REGION || 'eu-west-1',
-  ...(process.env.DYNAMODB_ENDPOINT && {
-    endpoint: process.env.DYNAMODB_ENDPOINT,
-  }),
-});
-
-const docClient = DynamoDBDocumentClient.from(client);
 const TABLE_NAME = process.env.SESSIONS_TABLE || 'WorkoutSessions';
 
 export async function createSession(input: CreateSessionInput): Promise<Session> {
@@ -28,7 +18,7 @@ export async function createSession(input: CreateSessionInput): Promise<Session>
     status: 'planned',
     strength: input.strength,
     wod: input.wod,
-    notes: input.notes,
+    ...(input.notes !== undefined && { notes: input.notes }),
     createdAt: now,
     updatedAt: now,
   };
@@ -61,9 +51,17 @@ export async function updateSession(
   const existing = await getSession(id);
   if (!existing) return null;
 
+  const updatedFields: Partial<Session> = {};
+
+  if (input.date !== undefined) updatedFields.date = input.date;
+  if (input.status !== undefined) updatedFields.status = input.status;
+  if (input.strength !== undefined) updatedFields.strength = input.strength;
+  if (input.wod !== undefined) updatedFields.wod = input.wod;
+  if (input.notes !== undefined) updatedFields.notes = input.notes;
+
   const updated: Session = {
     ...existing,
-    ...input,
+    ...updatedFields,
     id,
     createdAt: existing.createdAt,
     updatedAt: new Date().toISOString(),
@@ -73,6 +71,7 @@ export async function updateSession(
     new PutCommand({
       TableName: TABLE_NAME,
       Item: updated,
+      ConditionExpression: 'attribute_exists(id)',
     })
   );
 
@@ -80,27 +79,31 @@ export async function updateSession(
 }
 
 export async function deleteSession(id: string): Promise<boolean> {
-  const existing = await getSession(id);
-  if (!existing) return false;
-
-  await docClient.send(
-    new DeleteCommand({
-      TableName: TABLE_NAME,
-      Key: { id },
-    })
-  );
-
-  return true;
+  try {
+    await docClient.send(
+      new DeleteCommand({
+        TableName: TABLE_NAME,
+        Key: { id },
+        ConditionExpression: 'attribute_exists(id)',
+        ReturnValues: 'ALL_OLD',
+      })
+    );
+    return true;
+  } catch (error: unknown) {
+    if (
+      error instanceof Error &&
+      error.name === 'ConditionalCheckFailedException'
+    ) {
+      return false;
+    }
+    throw error;
+  }
 }
 
 export async function listSessions(
   startDate?: string,
   endDate?: string
 ): Promise<Session[]> {
-  // Use scan for single-user app; sufficient for personal use
-  const { DynamoDBClient: _c, ...rest } = await import('@aws-sdk/client-dynamodb');
-  const { ScanCommand } = await import('@aws-sdk/lib-dynamodb');
-
   let items: Session[] = [];
   let lastKey: Record<string, any> | undefined;
 

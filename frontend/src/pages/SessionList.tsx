@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Session } from '../types';
 import { api } from '../services/api';
+import { formatDate } from '../utils/format';
 
 const s: Record<string, React.CSSProperties> = {
   page: {
@@ -87,29 +88,47 @@ const s: Record<string, React.CSSProperties> = {
   },
 };
 
-function formatDate(dateStr: string): string {
-  const date = new Date(dateStr + 'T00:00:00');
-  return date.toLocaleDateString('en-US', {
-    weekday: 'short',
-    month: 'short',
-    day: 'numeric',
-  });
-}
-
 function SessionList() {
   const [sessions, setSessions] = useState<Session[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    document.title = 'Workouts - Workout Tracker';
+  }, []);
+
+  const loadSessions = () => {
+    setLoading(true);
+    setError(null);
     api
       .listSessions()
       .then(setSessions)
-      .catch((err) => console.error('Failed to load sessions:', err))
+      .catch((err) => {
+        console.error('Failed to load sessions:', err);
+        setError(err.message || 'Failed to load sessions.');
+      })
       .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    loadSessions();
   }, []);
 
   if (loading) {
     return <div style={s.loading}>Loading...</div>;
+  }
+
+  if (error) {
+    return (
+      <div style={{ textAlign: 'center', padding: '80px 20px' }} className="fade-in">
+        <div className="card" style={{ background: 'rgba(255,69,58,0.12)', color: 'var(--red)' }}>
+          {error}
+        </div>
+        <button className="btn btn-primary" onClick={loadSessions} style={{ marginTop: 16 }}>
+          Retry
+        </button>
+      </div>
+    );
   }
 
   if (sessions.length === 0) {
