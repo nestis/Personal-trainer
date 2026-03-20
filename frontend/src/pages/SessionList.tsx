@@ -3,46 +3,87 @@ import { Link } from 'react-router-dom';
 import { Session } from '../types';
 import { api } from '../services/api';
 
-const styles: Record<string, React.CSSProperties> = {
+const s: Record<string, React.CSSProperties> = {
   page: {
-    paddingTop: 16,
+    paddingTop: 20,
+    paddingBottom: 32,
   },
-  sessionCard: {
+  link: {
     display: 'block',
     textDecoration: 'none',
     color: 'inherit',
-    marginBottom: 12,
   },
-  cardHeader: {
+  list: {
+    background: 'var(--bg-grouped-secondary)',
+    borderRadius: 'var(--radius)',
+    overflow: 'hidden',
+  },
+  item: {
+    padding: '14px 16px',
     display: 'flex',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 8,
+    justifyContent: 'space-between',
+    gap: 12,
+    transition: 'background 0.15s',
+  },
+  itemContent: {
+    flex: 1,
+    minWidth: 0,
+  },
+  dateRow: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 4,
   },
   date: {
-    fontSize: '1rem',
+    fontSize: 17,
     fontWeight: 600,
+    letterSpacing: -0.2,
   },
-  exerciseList: {
-    fontSize: '0.9rem',
+  exercises: {
+    fontSize: 15,
     color: 'var(--text-secondary)',
-    lineHeight: 1.5,
+    lineHeight: 1.4,
   },
-  wodPreview: {
-    fontSize: '0.85rem',
-    color: 'var(--text-secondary)',
-    marginTop: 8,
-    fontStyle: 'italic',
+  wodHint: {
+    fontSize: 14,
+    color: 'var(--text-tertiary)',
+    marginTop: 4,
+    whiteSpace: 'nowrap' as const,
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+  },
+  chevron: {
+    color: 'var(--text-tertiary)',
+    fontSize: 18,
+    flexShrink: 0,
+  },
+  separator: {
+    height: '0.5px',
+    background: 'var(--separator)',
+    marginLeft: 16,
   },
   empty: {
     textAlign: 'center' as const,
-    padding: '60px 20px',
+    padding: '80px 20px',
+  },
+  emptyTitle: {
+    fontSize: 22,
+    fontWeight: 600,
+    marginBottom: 8,
+    letterSpacing: -0.3,
+  },
+  emptySubtitle: {
+    fontSize: 15,
     color: 'var(--text-secondary)',
+    marginBottom: 28,
   },
   loading: {
     textAlign: 'center' as const,
-    padding: '60px 20px',
+    padding: '80px 20px',
     color: 'var(--text-secondary)',
+    fontSize: 15,
   },
 };
 
@@ -68,52 +109,58 @@ function SessionList() {
   }, []);
 
   if (loading) {
-    return <div style={styles.loading}>Loading sessions...</div>;
+    return <div style={s.loading}>Loading...</div>;
   }
 
   if (sessions.length === 0) {
     return (
-      <div style={styles.empty}>
-        <p style={{ fontSize: '1.1rem', marginBottom: 12 }}>No sessions yet</p>
+      <div style={s.empty} className="fade-in">
+        <div style={s.emptyTitle}>No Sessions Yet</div>
+        <div style={s.emptySubtitle}>Plan your first workout to get started.</div>
         <Link to="/new" className="btn btn-primary">
-          Plan your first session
+          New Session
         </Link>
       </div>
     );
   }
 
   return (
-    <div style={styles.page}>
-      {sessions.map((session) => (
-        <Link
-          key={session.id}
-          to={`/session/${session.id}`}
-          style={styles.sessionCard}
-        >
-          <div className="card">
-            <div style={styles.cardHeader}>
-              <span style={styles.date}>{formatDate(session.date)}</span>
-              <span className={`badge badge-${session.status}`}>
-                {session.status}
-              </span>
-            </div>
-            <div style={styles.exerciseList}>
-              {session.strength.map((ex) => (
-                <div key={ex.id}>
-                  {ex.name || 'Unnamed'} — {ex.sets.length}x
-                  {ex.sets[0]?.reps || 0} @ {ex.sets[0]?.kilos || 0}kg
+    <div style={s.page} className="fade-in">
+      <div style={s.list}>
+        {sessions.map((session, i) => (
+          <div key={session.id}>
+            {i > 0 && <div style={s.separator} />}
+            <Link to={`/session/${session.id}`} style={s.link}>
+              <div style={s.item}>
+                <div style={s.itemContent}>
+                  <div style={s.dateRow}>
+                    <span style={s.date}>{formatDate(session.date)}</span>
+                    <span className={`badge badge-${session.status}`}>
+                      {session.status}
+                    </span>
+                  </div>
+                  <div style={s.exercises}>
+                    {session.strength
+                      .map((ex) =>
+                        ex.name
+                          ? `${ex.name} ${ex.sets.length}x${ex.sets[0]?.reps || 0}`
+                          : null
+                      )
+                      .filter(Boolean)
+                      .join(' / ') || 'No exercises'}
+                  </div>
+                  {session.wod.description && (
+                    <div style={s.wodHint}>
+                      {session.wod.name || 'WOD'}: {session.wod.description}
+                    </div>
+                  )}
                 </div>
-              ))}
-            </div>
-            {session.wod.description && (
-              <div style={styles.wodPreview}>
-                WOD: {session.wod.description.substring(0, 80)}
-                {session.wod.description.length > 80 ? '...' : ''}
+                <span style={s.chevron}>&#8250;</span>
               </div>
-            )}
+            </Link>
           </div>
-        </Link>
-      ))}
+        ))}
+      </div>
     </div>
   );
 }

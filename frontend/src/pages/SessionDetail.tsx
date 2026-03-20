@@ -5,54 +5,56 @@ import { api } from '../services/api';
 import ExerciseEditor from '../components/ExerciseEditor';
 import WodEditor from '../components/WodEditor';
 
-const styles: Record<string, React.CSSProperties> = {
+const s: Record<string, React.CSSProperties> = {
   page: {
-    paddingTop: 16,
+    paddingTop: 20,
+    paddingBottom: 40,
   },
   header: {
+    marginBottom: 28,
+  },
+  dateRow: {
     display: 'flex',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 20,
+    gap: 12,
+    marginBottom: 4,
   },
   date: {
-    fontSize: '1.3rem',
+    fontSize: 28,
     fontWeight: 700,
+    letterSpacing: -0.6,
   },
   section: {
-    marginBottom: 20,
+    marginBottom: 28,
   },
   sectionTitle: {
-    fontSize: '1rem',
-    fontWeight: 600,
-    marginBottom: 12,
+    fontSize: 13,
+    fontWeight: 400,
     color: 'var(--text-secondary)',
     textTransform: 'uppercase' as const,
-    letterSpacing: 1,
+    letterSpacing: 0.5,
+    marginBottom: 8,
+    paddingLeft: 4,
+  },
+  notes: {
+    fontSize: 15,
+    color: 'var(--text-secondary)',
+    lineHeight: 1.5,
+    whiteSpace: 'pre-wrap' as const,
+    padding: '12px 16px',
+    background: 'var(--bg-grouped-secondary)',
+    borderRadius: 'var(--radius)',
   },
   actions: {
     display: 'flex',
-    gap: 12,
-    marginTop: 24,
+    gap: 10,
+    marginTop: 32,
   },
-  notes: {
-    fontSize: '0.9rem',
+  loading: {
+    textAlign: 'center' as const,
+    padding: 60,
     color: 'var(--text-secondary)',
-    lineHeight: 1.6,
-    whiteSpace: 'pre-wrap' as const,
-  },
-  wodMeta: {
-    display: 'flex',
-    gap: 16,
-    marginTop: 8,
-    fontSize: '0.9rem',
-  },
-  metaItem: {
-    color: 'var(--text-secondary)',
-  },
-  metaValue: {
-    color: 'var(--text-primary)',
-    fontWeight: 600,
+    fontSize: 15,
   },
 };
 
@@ -62,14 +64,7 @@ function formatDate(dateStr: string): string {
     weekday: 'long',
     month: 'long',
     day: 'numeric',
-    year: 'numeric',
   });
-}
-
-function formatTime(totalSeconds: number): string {
-  const mins = Math.floor(totalSeconds / 60);
-  const secs = totalSeconds % 60;
-  return `${mins}:${secs.toString().padStart(2, '0')}`;
 }
 
 function SessionDetail() {
@@ -112,62 +107,45 @@ function SessionDetail() {
   };
 
   if (loading) {
-    return <div style={{ textAlign: 'center', padding: 40, color: 'var(--text-secondary)' }}>Loading...</div>;
+    return <div style={s.loading}>Loading...</div>;
   }
 
   if (!session) return null;
 
   return (
-    <div style={styles.page}>
-      <div style={styles.header}>
-        <span style={styles.date}>{formatDate(session.date)}</span>
+    <div style={s.page} className="fade-in">
+      <div style={s.header}>
+        <div style={s.dateRow}>
+          <span style={s.date}>{formatDate(session.date)}</span>
+        </div>
         <span className={`badge badge-${session.status}`}>{session.status}</span>
       </div>
 
-      <div style={styles.section}>
-        <h3 style={styles.sectionTitle}>Strength</h3>
+      <div style={s.section}>
+        <div style={s.sectionTitle}>Strength</div>
         <ExerciseEditor exercises={session.strength} onChange={() => {}} readOnly />
       </div>
 
-      <div style={styles.section}>
-        <h3 style={styles.sectionTitle}>WOD</h3>
+      <div style={s.section}>
+        <div style={s.sectionTitle}>WOD</div>
         <WodEditor wod={session.wod} onChange={() => {}} readOnly />
-        {(session.wod.timeSeconds || session.wod.avgHeartRate || session.wod.maxHeartRate) && (
-          <div style={styles.wodMeta}>
-            {session.wod.timeSeconds && (
-              <span style={styles.metaItem}>
-                Time: <span style={styles.metaValue}>{formatTime(session.wod.timeSeconds)}</span>
-              </span>
-            )}
-            {session.wod.avgHeartRate && (
-              <span style={styles.metaItem}>
-                Avg HR: <span style={styles.metaValue}>{session.wod.avgHeartRate} bpm</span>
-              </span>
-            )}
-            {session.wod.maxHeartRate && (
-              <span style={styles.metaItem}>
-                Max HR: <span style={styles.metaValue}>{session.wod.maxHeartRate} bpm</span>
-              </span>
-            )}
-          </div>
-        )}
       </div>
 
       {session.notes && (
-        <div style={styles.section}>
-          <h3 style={styles.sectionTitle}>Notes</h3>
-          <div style={styles.notes}>{session.notes}</div>
+        <div style={s.section}>
+          <div style={s.sectionTitle}>Notes</div>
+          <div style={s.notes}>{session.notes}</div>
         </div>
       )}
 
-      <div style={styles.actions}>
+      <div style={s.actions}>
         {session.status === 'planned' && (
           <button
             className="btn btn-primary"
             onClick={handleMarkCompleted}
             style={{ flex: 1 }}
           >
-            Mark Completed
+            Complete
           </button>
         )}
         <Link

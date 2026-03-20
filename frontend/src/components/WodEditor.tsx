@@ -6,12 +6,12 @@ interface Props {
   readOnly?: boolean;
 }
 
-const styles: Record<string, React.CSSProperties> = {
+const s: Record<string, React.CSSProperties> = {
   grid: {
     display: 'grid',
     gridTemplateColumns: '1fr 1fr 1fr',
-    gap: 8,
-    marginTop: 12,
+    gap: 10,
+    marginTop: 14,
   },
 };
 
@@ -32,32 +32,35 @@ function parseTime(value: string): number {
 function WodEditor({ wod, onChange, readOnly }: Props) {
   return (
     <div className="card">
-      <div style={{ marginBottom: 12 }}>
-        <label className="label">WOD Name (optional — for tracking records)</label>
+      <div style={{ marginBottom: 14 }}>
+        <label className="label">WOD Name</label>
         <input
           className="input"
-          placeholder="e.g., Fran, Murph, Fight Gone Bad..."
+          placeholder="e.g., Fran, Murph..."
           value={wod.name || ''}
           onChange={(e) => onChange({ ...wod, name: e.target.value || undefined })}
           readOnly={readOnly}
         />
       </div>
-      <label className="label">WOD Description</label>
-      <textarea
-        className="input"
-        value={wod.description}
-        placeholder="Describe the WOD..."
-        onChange={(e) => onChange({ ...wod, description: e.target.value })}
-        readOnly={readOnly}
-        rows={3}
-      />
 
-      <div style={styles.grid}>
+      <div>
+        <label className="label">Description</label>
+        <textarea
+          className="input"
+          value={wod.description}
+          placeholder="Describe the WOD..."
+          onChange={(e) => onChange({ ...wod, description: e.target.value })}
+          readOnly={readOnly}
+          rows={3}
+        />
+      </div>
+
+      <div style={s.grid}>
         <div>
-          <label className="label">Time (m:ss)</label>
+          <label className="label">Time</label>
           <input
             className="input input-sm"
-            placeholder="0:00"
+            placeholder="m:ss"
             value={wod.timeSeconds ? formatTime(wod.timeSeconds) : ''}
             onChange={(e) =>
               onChange({ ...wod, timeSeconds: parseTime(e.target.value) })

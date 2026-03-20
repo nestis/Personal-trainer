@@ -6,43 +6,94 @@ interface Props {
   readOnly?: boolean;
 }
 
-const styles: Record<string, React.CSSProperties> = {
+const s: Record<string, React.CSSProperties> = {
   exercise: {
-    marginBottom: 16,
+    marginBottom: 12,
+    overflow: 'hidden',
   },
   exerciseHeader: {
     display: 'flex',
     alignItems: 'center',
-    gap: 8,
-    marginBottom: 8,
+    gap: 10,
+    marginBottom: 14,
   },
   nameInput: {
     flex: 1,
+    fontWeight: 600,
+    fontSize: 17,
   },
-  setRow: {
-    display: 'grid',
-    gridTemplateColumns: '40px 1fr 1fr 40px',
-    gap: 8,
-    alignItems: 'center',
-    marginBottom: 6,
-  },
-  setLabel: {
-    fontSize: '0.85rem',
-    color: 'var(--text-secondary)',
-    textAlign: 'center' as const,
-  },
-  checkbox: {
-    width: 20,
-    height: 20,
-    accentColor: 'var(--success)',
+  removeExBtn: {
+    background: 'none',
+    border: 'none',
+    color: 'var(--red)',
+    fontSize: 15,
+    fontWeight: 500,
     cursor: 'pointer',
-    justifySelf: 'center' as const,
+    padding: '6px 10px',
+    borderRadius: 'var(--radius-xs)',
+    transition: 'background 0.15s',
   },
   setsHeader: {
     display: 'grid',
-    gridTemplateColumns: '40px 1fr 1fr 40px',
+    gridTemplateColumns: '36px 1fr 1fr 36px',
     gap: 8,
-    marginBottom: 4,
+    marginBottom: 6,
+    padding: '0 2px',
+  },
+  headerLabel: {
+    fontSize: 12,
+    fontWeight: 500,
+    color: 'var(--text-tertiary)',
+    textTransform: 'uppercase' as const,
+    letterSpacing: 0.5,
+  },
+  setRow: {
+    display: 'grid',
+    gridTemplateColumns: '36px 1fr 1fr 36px',
+    gap: 8,
+    alignItems: 'center',
+    padding: '6px 2px',
+  },
+  setNum: {
+    fontSize: 15,
+    color: 'var(--text-tertiary)',
+    textAlign: 'center' as const,
+    fontWeight: 500,
+    fontVariantNumeric: 'tabular-nums',
+  },
+  checkbox: {
+    width: 22,
+    height: 22,
+    accentColor: 'var(--green)',
+    cursor: 'pointer',
+    justifySelf: 'center' as const,
+  },
+  setActions: {
+    display: 'flex',
+    gap: 8,
+    marginTop: 10,
+  },
+  setBtn: {
+    background: 'none',
+    border: 'none',
+    color: 'var(--tint)',
+    fontSize: 14,
+    fontWeight: 500,
+    cursor: 'pointer',
+    padding: '6px 0',
+  },
+  addExercise: {
+    background: 'none',
+    border: 'none',
+    color: 'var(--tint)',
+    fontSize: 17,
+    fontWeight: 500,
+    cursor: 'pointer',
+    padding: '14px 0',
+    width: '100%',
+    textAlign: 'center' as const,
+    borderRadius: 'var(--radius)',
+    transition: 'background 0.15s',
   },
 };
 
@@ -100,11 +151,11 @@ function ExerciseEditor({ exercises, onChange, readOnly }: Props) {
   return (
     <div>
       {exercises.map((exercise, exIndex) => (
-        <div key={exercise.id} className="card" style={styles.exercise}>
-          <div style={styles.exerciseHeader}>
+        <div key={exercise.id} className="card" style={s.exercise}>
+          <div style={s.exerciseHeader}>
             <input
               className="input"
-              style={styles.nameInput}
+              style={s.nameInput}
               placeholder="Exercise name"
               value={exercise.name}
               onChange={(e) =>
@@ -114,25 +165,27 @@ function ExerciseEditor({ exercises, onChange, readOnly }: Props) {
             />
             {!readOnly && (
               <button
-                className="btn btn-danger btn-sm"
+                style={s.removeExBtn}
                 onClick={() => removeExercise(exIndex)}
                 type="button"
               >
-                X
+                Remove
               </button>
             )}
           </div>
 
-          <div style={styles.setsHeader}>
-            <span className="label" style={{ textAlign: 'center', marginBottom: 0 }}>Set</span>
-            <span className="label" style={{ marginBottom: 0 }}>Reps</span>
-            <span className="label" style={{ marginBottom: 0 }}>Kg</span>
-            <span className="label" style={{ textAlign: 'center', marginBottom: 0 }}>Done</span>
+          <div style={s.setsHeader}>
+            <span style={{ ...s.headerLabel, textAlign: 'center' }}>SET</span>
+            <span style={s.headerLabel}>REPS</span>
+            <span style={s.headerLabel}>KG</span>
+            <span style={{ ...s.headerLabel, textAlign: 'center' }}>
+              {readOnly ? '' : ''}
+            </span>
           </div>
 
           {exercise.sets.map((set, setIndex) => (
-            <div key={setIndex} style={styles.setRow}>
-              <span style={styles.setLabel}>{set.setNumber}</span>
+            <div key={setIndex} style={s.setRow}>
+              <span style={s.setNum}>{set.setNumber}</span>
               <input
                 className="input input-sm"
                 type="number"
@@ -157,7 +210,7 @@ function ExerciseEditor({ exercises, onChange, readOnly }: Props) {
               />
               <input
                 type="checkbox"
-                style={styles.checkbox}
+                style={s.checkbox}
                 checked={set.completed}
                 onChange={(e) =>
                   updateSet(exIndex, setIndex, 'completed', e.target.checked)
@@ -168,21 +221,17 @@ function ExerciseEditor({ exercises, onChange, readOnly }: Props) {
           ))}
 
           {!readOnly && (
-            <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
-              <button
-                className="btn btn-secondary btn-sm"
-                onClick={() => addSet(exIndex)}
-                type="button"
-              >
-                + Set
+            <div style={s.setActions}>
+              <button style={s.setBtn} onClick={() => addSet(exIndex)} type="button">
+                + Add Set
               </button>
               {exercise.sets.length > 1 && (
                 <button
-                  className="btn btn-secondary btn-sm"
+                  style={{ ...s.setBtn, color: 'var(--text-secondary)' }}
                   onClick={() => removeSet(exIndex, exercise.sets.length - 1)}
                   type="button"
                 >
-                  - Set
+                  Remove Last
                 </button>
               )}
             </div>
@@ -191,11 +240,7 @@ function ExerciseEditor({ exercises, onChange, readOnly }: Props) {
       ))}
 
       {!readOnly && (
-        <button
-          className="btn btn-secondary btn-block"
-          onClick={addExercise}
-          type="button"
-        >
+        <button style={s.addExercise} onClick={addExercise} type="button">
           + Add Exercise
         </button>
       )}

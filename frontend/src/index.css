@@ -1,17 +1,33 @@
 :root {
-  --bg-primary: #0f0f1a;
-  --bg-secondary: #1a1a2e;
-  --bg-card: #16213e;
-  --bg-input: #1a1a3e;
-  --text-primary: #eaeaea;
-  --text-secondary: #a0a0b8;
-  --accent: #e94560;
-  --accent-hover: #ff6b81;
-  --success: #2ecc71;
-  --warning: #f39c12;
-  --border: #2a2a4a;
-  --radius: 12px;
-  --radius-sm: 8px;
+  /* Apple Dark Mode palette */
+  --bg-primary: #000000;
+  --bg-secondary: #1c1c1e;
+  --bg-tertiary: #2c2c2e;
+  --bg-elevated: #1c1c1e;
+  --bg-grouped: #000000;
+  --bg-grouped-secondary: #1c1c1e;
+  --fill: rgba(120, 120, 128, 0.2);
+  --fill-secondary: rgba(120, 120, 128, 0.16);
+
+  --text-primary: #ffffff;
+  --text-secondary: rgba(235, 235, 245, 0.6);
+  --text-tertiary: rgba(235, 235, 245, 0.3);
+  --text-placeholder: rgba(235, 235, 245, 0.3);
+
+  --tint: #0a84ff;
+  --tint-hover: #409cff;
+  --green: #30d158;
+  --orange: #ff9f0a;
+  --red: #ff453a;
+  --indigo: #5e5ce6;
+
+  --separator: rgba(84, 84, 88, 0.65);
+  --separator-opaque: #38383a;
+  --label-grouped: rgba(235, 235, 245, 0.6);
+
+  --radius: 14px;
+  --radius-sm: 10px;
+  --radius-xs: 8px;
 }
 
 * {
@@ -26,168 +42,203 @@ html {
 }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen,
-    Ubuntu, Cantarell, sans-serif;
-  background: var(--bg-primary);
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text',
+    'Helvetica Neue', Helvetica, Arial, sans-serif;
+  background: var(--bg-grouped);
   color: var(--text-primary);
   min-height: 100vh;
+  min-height: 100dvh;
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 #root {
   min-height: 100vh;
+  min-height: 100dvh;
   display: flex;
   flex-direction: column;
 }
 
-input,
-textarea,
-select,
-button {
+input, textarea, select, button {
   font-family: inherit;
   font-size: inherit;
+  color: inherit;
 }
 
 a {
-  color: var(--accent);
+  color: var(--tint);
   text-decoration: none;
 }
 
-/* Utility classes */
+/* ─── Container ────────────────────────────────────────── */
 .container {
   width: 100%;
-  max-width: 600px;
+  max-width: 560px;
   margin: 0 auto;
-  padding: 0 16px;
+  padding: 0 20px;
 }
 
+/* ─── Grouped Card (iOS grouped table section style) ──── */
+.card {
+  background: var(--bg-grouped-secondary);
+  border-radius: var(--radius);
+  padding: 16px;
+  /* No border — Apple uses bg contrast, not strokes */
+}
+
+/* ─── Inputs ───────────────────────────────────────────── */
+.input {
+  width: 100%;
+  padding: 11px 16px;
+  background: var(--fill);
+  border: none;
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-size: 17px;
+  line-height: 1.3;
+  transition: background 0.15s ease;
+}
+
+.input::placeholder {
+  color: var(--text-placeholder);
+}
+
+.input:focus {
+  outline: none;
+  background: var(--fill-secondary);
+  box-shadow: 0 0 0 3px rgba(10, 132, 255, 0.3);
+}
+
+.input-sm {
+  padding: 9px 12px;
+  font-size: 15px;
+}
+
+textarea.input {
+  resize: vertical;
+  min-height: 72px;
+  line-height: 1.4;
+}
+
+select.input {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='rgba(235,235,245,0.6)' viewBox='0 0 16 16'%3E%3Cpath d='M8 11L3 6h10z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  padding-right: 32px;
+}
+
+/* ─── Labels ───────────────────────────────────────────── */
+.label {
+  display: block;
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin-bottom: 6px;
+  font-weight: 400;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+/* ─── Buttons ──────────────────────────────────────────── */
 .btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  padding: 12px 20px;
+  gap: 6px;
+  padding: 14px 20px;
   border: none;
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius);
   font-weight: 600;
-  font-size: 0.95rem;
+  font-size: 17px;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: opacity 0.15s ease, transform 0.1s ease;
   touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+}
+
+.btn:active {
+  transform: scale(0.97);
+  opacity: 0.85;
+}
+
+.btn:disabled {
+  opacity: 0.4;
+  pointer-events: none;
 }
 
 .btn-primary {
-  background: var(--accent);
-  color: white;
-}
-
-.btn-primary:hover {
-  background: var(--accent-hover);
+  background: var(--tint);
+  color: #fff;
 }
 
 .btn-secondary {
-  background: var(--bg-card);
-  color: var(--text-primary);
-  border: 1px solid var(--border);
-}
-
-.btn-secondary:hover {
-  border-color: var(--accent);
+  background: var(--fill);
+  color: var(--tint);
 }
 
 .btn-danger {
-  background: transparent;
-  color: var(--accent);
-  border: 1px solid var(--accent);
-}
-
-.btn-danger:hover {
-  background: var(--accent);
-  color: white;
+  background: rgba(255, 69, 58, 0.12);
+  color: var(--red);
 }
 
 .btn-sm {
-  padding: 8px 14px;
-  font-size: 0.85rem;
+  padding: 10px 16px;
+  font-size: 15px;
+  border-radius: var(--radius-sm);
 }
 
 .btn-block {
   width: 100%;
 }
 
-.card {
-  background: var(--bg-card);
-  border-radius: var(--radius);
-  padding: 16px;
-  border: 1px solid var(--border);
-}
-
-.input {
-  width: 100%;
-  padding: 12px 14px;
-  background: var(--bg-input);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  color: var(--text-primary);
-  font-size: 1rem;
-  transition: border-color 0.2s;
-}
-
-.input:focus {
-  outline: none;
-  border-color: var(--accent);
-}
-
-.input-sm {
-  padding: 8px 10px;
-  font-size: 0.9rem;
-}
-
-textarea.input {
-  resize: vertical;
-  min-height: 80px;
-}
-
-.label {
-  display: block;
-  font-size: 0.85rem;
-  color: var(--text-secondary);
-  margin-bottom: 6px;
-  font-weight: 500;
-}
-
+/* ─── Badges ───────────────────────────────────────────── */
 .badge {
-  display: inline-block;
-  padding: 4px 10px;
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
   border-radius: 20px;
-  font-size: 0.75rem;
+  font-size: 12px;
   font-weight: 600;
   text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
 
 .badge-planned {
-  background: rgba(243, 156, 18, 0.15);
-  color: var(--warning);
+  background: rgba(255, 159, 10, 0.14);
+  color: var(--orange);
 }
 
 .badge-completed {
-  background: rgba(46, 204, 113, 0.15);
-  color: var(--success);
+  background: rgba(48, 209, 88, 0.14);
+  color: var(--green);
 }
 
-/* Spacing helpers */
-.mb-1 { margin-bottom: 8px; }
-.mb-2 { margin-bottom: 16px; }
-.mb-3 { margin-bottom: 24px; }
-.mt-1 { margin-top: 8px; }
-.mt-2 { margin-top: 16px; }
-.mt-3 { margin-top: 24px; }
-.gap-1 { gap: 8px; }
-.gap-2 { gap: 16px; }
+/* ─── Section headers (iOS grouped section style) ──────── */
+.section-header {
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  padding: 0 4px;
+  margin-bottom: 8px;
+}
 
-.flex { display: flex; }
-.flex-col { flex-direction: column; }
-.items-center { align-items: center; }
-.justify-between { justify-content: space-between; }
-.flex-1 { flex: 1; }
-.flex-wrap { flex-wrap: wrap; }
+/* ─── Separator ────────────────────────────────────────── */
+.separator {
+  height: 1px;
+  background: var(--separator);
+  margin: 0;
+  border: none;
+}
+
+/* ─── Animations ───────────────────────────────────────── */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.fade-in {
+  animation: fadeIn 0.25s ease-out;
+}

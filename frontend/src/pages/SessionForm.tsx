@@ -5,23 +5,41 @@ import { api } from '../services/api';
 import ExerciseEditor from '../components/ExerciseEditor';
 import WodEditor from '../components/WodEditor';
 
-const styles: Record<string, React.CSSProperties> = {
+const s: Record<string, React.CSSProperties> = {
   page: {
-    paddingTop: 16,
+    paddingTop: 20,
+    paddingBottom: 40,
   },
   section: {
-    marginBottom: 20,
+    marginBottom: 28,
   },
   sectionTitle: {
-    fontSize: '1.1rem',
-    fontWeight: 600,
-    marginBottom: 12,
-    color: 'var(--text-primary)',
+    fontSize: 13,
+    fontWeight: 400,
+    color: 'var(--text-secondary)',
+    textTransform: 'uppercase' as const,
+    letterSpacing: 0.5,
+    marginBottom: 8,
+    paddingLeft: 4,
+  },
+  row: {
+    display: 'flex',
+    gap: 12,
+    marginBottom: 14,
+  },
+  field: {
+    flex: 1,
   },
   actions: {
     display: 'flex',
-    gap: 12,
-    marginTop: 24,
+    gap: 10,
+    marginTop: 32,
+  },
+  loading: {
+    textAlign: 'center' as const,
+    padding: 60,
+    color: 'var(--text-secondary)',
+    fontSize: 15,
   },
 };
 
@@ -74,21 +92,21 @@ function SessionForm() {
       navigate('/');
     } catch (err) {
       console.error('Failed to save session:', err);
-      alert('Failed to save session. Check console for details.');
+      alert('Failed to save session.');
     } finally {
       setSaving(false);
     }
   };
 
   if (loading) {
-    return <div style={{ textAlign: 'center', padding: 40, color: 'var(--text-secondary)' }}>Loading...</div>;
+    return <div style={s.loading}>Loading...</div>;
   }
 
   return (
-    <div style={styles.page}>
-      <div style={styles.section}>
-        <div style={{ display: 'flex', gap: 12, marginBottom: 16 }}>
-          <div style={{ flex: 1 }}>
+    <div style={s.page} className="fade-in">
+      <div style={s.section}>
+        <div style={s.row}>
+          <div style={s.field}>
             <label className="label">Date</label>
             <input
               className="input"
@@ -98,7 +116,7 @@ function SessionForm() {
             />
           </div>
           {isEdit && (
-            <div style={{ flex: 1 }}>
+            <div style={s.field}>
               <label className="label">Status</label>
               <select
                 className="input"
@@ -113,17 +131,17 @@ function SessionForm() {
         </div>
       </div>
 
-      <div style={styles.section}>
-        <h2 style={styles.sectionTitle}>Strength</h2>
+      <div style={s.section}>
+        <div style={s.sectionTitle}>Strength</div>
         <ExerciseEditor exercises={exercises} onChange={setExercises} />
       </div>
 
-      <div style={styles.section}>
-        <h2 style={styles.sectionTitle}>WOD</h2>
+      <div style={s.section}>
+        <div style={s.sectionTitle}>WOD</div>
         <WodEditor wod={wod} onChange={setWod} />
       </div>
 
-      <div style={styles.section}>
+      <div style={s.section}>
         <label className="label">Notes</label>
         <textarea
           className="input"
@@ -134,7 +152,7 @@ function SessionForm() {
         />
       </div>
 
-      <div style={styles.actions}>
+      <div style={s.actions}>
         <button
           className="btn btn-secondary"
           onClick={() => navigate(-1)}
@@ -148,7 +166,7 @@ function SessionForm() {
           disabled={saving}
           style={{ flex: 2 }}
         >
-          {saving ? 'Saving...' : isEdit ? 'Update Session' : 'Plan Session'}
+          {saving ? 'Saving...' : isEdit ? 'Update' : 'Plan Session'}
         </button>
       </div>
     </div>

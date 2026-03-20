@@ -2,178 +2,232 @@ import { useEffect, useState } from 'react';
 import { StrengthPR, WodRecord, ManualStrengthPR, ManualWodRecord, ManualRecord } from '../types';
 import { api } from '../services/api';
 
-const styles: Record<string, React.CSSProperties> = {
+const s: Record<string, React.CSSProperties> = {
   page: {
-    paddingTop: 16,
+    paddingTop: 20,
+    paddingBottom: 40,
   },
-  tabs: {
+  /* Apple-style segmented control */
+  segmented: {
     display: 'flex',
     gap: 0,
-    marginBottom: 20,
-    borderRadius: 'var(--radius-sm)',
-    overflow: 'hidden',
-    border: '1px solid var(--border)',
+    background: 'var(--fill)',
+    borderRadius: 'var(--radius-xs)',
+    padding: 2,
+    marginBottom: 24,
   },
-  tab: {
+  seg: {
     flex: 1,
-    padding: '12px 16px',
+    padding: '8px 16px',
     border: 'none',
-    background: 'var(--bg-card)',
+    background: 'transparent',
     color: 'var(--text-secondary)',
-    fontWeight: 600,
-    fontSize: '0.95rem',
+    fontWeight: 500,
+    fontSize: 13,
     cursor: 'pointer',
-    transition: 'all 0.2s',
+    borderRadius: 7,
+    transition: 'all 0.2s ease',
   },
-  tabActive: {
+  segActive: {
     flex: 1,
-    padding: '12px 16px',
+    padding: '8px 16px',
     border: 'none',
-    background: 'var(--accent)',
-    color: 'white',
+    background: 'var(--bg-tertiary)',
+    color: 'var(--text-primary)',
     fontWeight: 600,
-    fontSize: '0.95rem',
+    fontSize: 13,
     cursor: 'pointer',
+    borderRadius: 7,
+    boxShadow: '0 1px 4px rgba(0,0,0,0.3)',
   },
-  sectionHeader: {
-    fontSize: '0.8rem',
+  sectionLabel: {
+    fontSize: 13,
+    fontWeight: 400,
     color: 'var(--text-secondary)',
     textTransform: 'uppercase' as const,
-    letterSpacing: 1,
-    marginBottom: 12,
-    marginTop: 24,
-    paddingBottom: 8,
-    borderBottom: '1px solid var(--border)',
+    letterSpacing: 0.5,
+    marginBottom: 8,
+    marginTop: 28,
+    paddingLeft: 4,
   },
-  exerciseGroup: {
-    marginBottom: 20,
+  firstSectionLabel: {
+    fontSize: 13,
+    fontWeight: 400,
+    color: 'var(--text-secondary)',
+    textTransform: 'uppercase' as const,
+    letterSpacing: 0.5,
+    marginBottom: 8,
+    paddingLeft: 4,
+  },
+  /* Grouped card */
+  group: {
+    marginBottom: 12,
+    overflow: 'hidden',
   },
   exerciseName: {
-    fontSize: '1.1rem',
-    fontWeight: 700,
-    marginBottom: 8,
-    color: 'var(--text-primary)',
-  },
-  estimated1rm: {
-    fontSize: '0.85rem',
-    color: 'var(--accent)',
+    fontSize: 17,
     fontWeight: 600,
-    marginBottom: 10,
+    letterSpacing: -0.2,
+    marginBottom: 2,
+  },
+  est1rm: {
+    fontSize: 13,
+    color: 'var(--tint)',
+    fontWeight: 500,
+    marginBottom: 12,
   },
   prRow: {
     display: 'grid',
-    gridTemplateColumns: '60px 1fr 80px',
+    gridTemplateColumns: '52px 1fr 80px',
     gap: 8,
     alignItems: 'center',
-    padding: '10px 12px',
-    borderBottom: '1px solid var(--border)',
+    padding: '10px 0',
   },
-  prRowDeletable: {
+  prRowDel: {
     display: 'grid',
-    gridTemplateColumns: '60px 1fr 80px 36px',
+    gridTemplateColumns: '52px 1fr 72px 28px',
     gap: 8,
     alignItems: 'center',
-    padding: '10px 12px',
-    borderBottom: '1px solid var(--border)',
+    padding: '10px 0',
   },
-  repsLabel: {
-    fontSize: '0.9rem',
+  reps: {
+    fontSize: 15,
     color: 'var(--text-secondary)',
     fontWeight: 500,
   },
-  kilosValue: {
-    fontSize: '1.1rem',
-    fontWeight: 700,
-    color: 'var(--text-primary)',
+  kg: {
+    fontSize: 17,
+    fontWeight: 600,
+    fontVariantNumeric: 'tabular-nums',
   },
-  dateLabel: {
-    fontSize: '0.8rem',
-    color: 'var(--text-secondary)',
+  dateSmall: {
+    fontSize: 13,
+    color: 'var(--text-tertiary)',
     textAlign: 'right' as const,
+    fontVariantNumeric: 'tabular-nums',
   },
+  separator: {
+    height: '0.5px',
+    background: 'var(--separator)',
+    marginLeft: 52,
+  },
+  /* WOD cards */
   wodCard: {
-    marginBottom: 16,
+    marginBottom: 12,
+  },
+  wodName: {
+    fontSize: 17,
+    fontWeight: 600,
+    letterSpacing: -0.2,
+    marginBottom: 2,
+  },
+  wodTime: {
+    fontSize: 28,
+    fontWeight: 700,
+    color: 'var(--tint)',
+    letterSpacing: -0.5,
+    fontVariantNumeric: 'tabular-nums',
+    marginBottom: 6,
+  },
+  wodMeta: {
+    display: 'flex',
+    gap: 16,
+    fontSize: 13,
+    color: 'var(--text-secondary)',
+    marginBottom: 12,
+  },
+  histLabel: {
+    fontSize: 12,
+    fontWeight: 400,
+    color: 'var(--text-tertiary)',
+    textTransform: 'uppercase' as const,
+    letterSpacing: 0.5,
+    marginBottom: 6,
+  },
+  histRow: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    padding: '6px 0',
+    fontSize: 14,
+    color: 'var(--text-secondary)',
+    borderBottom: '0.5px solid var(--separator)',
   },
   wodHeader: {
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
   },
-  wodName: {
-    fontSize: '1.1rem',
-    fontWeight: 700,
-    marginBottom: 4,
-  },
-  wodBest: {
-    fontSize: '1.3rem',
-    fontWeight: 700,
-    color: 'var(--accent)',
+  wodDesc: {
+    fontSize: 14,
+    color: 'var(--text-secondary)',
     marginBottom: 8,
+    lineHeight: 1.4,
   },
-  wodMeta: {
-    display: 'flex',
-    gap: 16,
-    fontSize: '0.85rem',
-    color: 'var(--text-secondary)',
-    marginBottom: 10,
-  },
-  historyTitle: {
-    fontSize: '0.8rem',
-    color: 'var(--text-secondary)',
-    textTransform: 'uppercase' as const,
-    letterSpacing: 1,
-    marginBottom: 6,
-  },
-  historyRow: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    padding: '4px 0',
-    fontSize: '0.85rem',
-    color: 'var(--text-secondary)',
-    borderBottom: '1px solid var(--border)',
-  },
-  empty: {
-    textAlign: 'center' as const,
-    padding: '40px 20px',
-    color: 'var(--text-secondary)',
-  },
+  /* Forms */
   formCard: {
-    marginBottom: 16,
+    marginBottom: 12,
   },
   formTitle: {
-    fontSize: '0.95rem',
+    fontSize: 17,
     fontWeight: 600,
-    marginBottom: 12,
-    color: 'var(--text-primary)',
+    marginBottom: 16,
+    letterSpacing: -0.2,
   },
   formRow: {
     display: 'flex',
-    gap: 8,
-    marginBottom: 8,
+    gap: 10,
+    marginBottom: 10,
   },
   formField: {
     flex: 1,
   },
-  deleteBtn: {
+  formActions: {
+    display: 'flex',
+    gap: 8,
+    marginTop: 16,
+  },
+  /* Delete button */
+  delBtn: {
     background: 'none',
     border: 'none',
-    color: 'var(--accent)',
+    color: 'var(--red)',
     cursor: 'pointer',
-    fontSize: '1rem',
-    padding: '4px 8px',
-    borderRadius: 4,
+    fontSize: 17,
+    padding: 0,
     lineHeight: 1,
+    opacity: 0.7,
+    transition: 'opacity 0.15s',
   },
-  notes: {
-    fontSize: '0.8rem',
-    color: 'var(--text-secondary)',
+  addBtn: {
+    background: 'none',
+    border: 'none',
+    color: 'var(--tint)',
+    fontSize: 17,
+    fontWeight: 500,
+    cursor: 'pointer',
+    padding: '14px 0',
+    width: '100%',
+    textAlign: 'center' as const,
+    borderRadius: 'var(--radius)',
+    transition: 'background 0.15s',
+  },
+  empty: {
+    textAlign: 'center' as const,
+    padding: '24px 20px',
+    color: 'var(--text-tertiary)',
+    fontSize: 15,
+  },
+  note: {
+    fontSize: 13,
+    color: 'var(--text-tertiary)',
     fontStyle: 'italic',
-    marginTop: 4,
+    marginTop: 2,
   },
-  wodDescription: {
-    fontSize: '0.85rem',
+  loading: {
+    textAlign: 'center' as const,
+    padding: '60px 20px',
     color: 'var(--text-secondary)',
-    marginBottom: 8,
+    fontSize: 15,
   },
 };
 
@@ -193,26 +247,15 @@ function parseTime(value: string): number {
 
 function formatDate(dateStr: string): string {
   const date = new Date(dateStr + 'T00:00:00');
-  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: '2-digit' });
 }
 
-function groupByExercise(prs: StrengthPR[]): Map<string, StrengthPR[]> {
-  const map = new Map<string, StrengthPR[]>();
-  for (const pr of prs) {
-    const key = pr.exercise.toLowerCase();
+function groupByExercise<T extends { exercise: string }>(items: T[]): Map<string, T[]> {
+  const map = new Map<string, T[]>();
+  for (const item of items) {
+    const key = item.exercise.toLowerCase();
     const existing = map.get(key) || [];
-    existing.push(pr);
-    map.set(key, existing);
-  }
-  return map;
-}
-
-function groupManualStrengthByExercise(records: ManualStrengthPR[]): Map<string, ManualStrengthPR[]> {
-  const map = new Map<string, ManualStrengthPR[]>();
-  for (const r of records) {
-    const key = r.exercise.toLowerCase();
-    const existing = map.get(key) || [];
-    existing.push(r);
+    existing.push(item);
     map.set(key, existing);
   }
   return map;
@@ -227,7 +270,6 @@ function Records() {
   const [showStrengthForm, setShowStrengthForm] = useState(false);
   const [showWodForm, setShowWodForm] = useState(false);
 
-  // Strength form state
   const [sExercise, setSExercise] = useState('');
   const [sReps, setSReps] = useState('');
   const [sKilos, setSKilos] = useState('');
@@ -235,7 +277,6 @@ function Records() {
   const [sNotes, setSNotes] = useState('');
   const [sSaving, setSSaving] = useState(false);
 
-  // WOD form state
   const [wName, setWName] = useState('');
   const [wDescription, setWDescription] = useState('');
   const [wTime, setWTime] = useState('');
@@ -264,24 +305,15 @@ function Records() {
     setSSaving(true);
     try {
       await api.createManualStrengthPR({
-        exercise: sExercise,
-        reps: parseInt(sReps),
-        kilos: parseFloat(sKilos),
-        date: sDate,
-        notes: sNotes || undefined,
+        exercise: sExercise, reps: parseInt(sReps), kilos: parseFloat(sKilos),
+        date: sDate, notes: sNotes || undefined,
       });
-      setSExercise('');
-      setSReps('');
-      setSKilos('');
-      setSNotes('');
+      setSExercise(''); setSReps(''); setSKilos(''); setSNotes('');
       setShowStrengthForm(false);
       loadData();
     } catch (err) {
       console.error('Failed to add strength PR:', err);
-      alert('Failed to save. Check console.');
-    } finally {
-      setSSaving(false);
-    }
+    } finally { setSSaving(false); }
   };
 
   const handleAddWodRecord = async () => {
@@ -289,84 +321,74 @@ function Records() {
     setWSaving(true);
     try {
       await api.createManualWodRecord({
-        name: wName,
-        description: wDescription || undefined,
+        name: wName, description: wDescription || undefined,
         timeSeconds: parseTime(wTime),
         avgHeartRate: wAvgHR ? parseInt(wAvgHR) : undefined,
         maxHeartRate: wMaxHR ? parseInt(wMaxHR) : undefined,
-        date: wDate,
-        notes: wNotes || undefined,
+        date: wDate, notes: wNotes || undefined,
       });
-      setWName('');
-      setWDescription('');
-      setWTime('');
-      setWAvgHR('');
-      setWMaxHR('');
-      setWNotes('');
+      setWName(''); setWDescription(''); setWTime('');
+      setWAvgHR(''); setWMaxHR(''); setWNotes('');
       setShowWodForm(false);
       loadData();
     } catch (err) {
       console.error('Failed to add WOD record:', err);
-      alert('Failed to save. Check console.');
-    } finally {
-      setWSaving(false);
-    }
+    } finally { setWSaving(false); }
   };
 
   const handleDeleteManual = async (id: string) => {
     if (!confirm('Delete this record?')) return;
-    try {
-      await api.deleteManualRecord(id);
-      loadData();
-    } catch (err) {
-      console.error('Failed to delete record:', err);
-    }
+    try { await api.deleteManualRecord(id); loadData(); }
+    catch (err) { console.error('Failed to delete record:', err); }
   };
 
   if (loading) {
-    return <div style={styles.empty}>Loading records...</div>;
+    return <div style={s.loading}>Loading...</div>;
   }
 
   const grouped = groupByExercise(strengthPRs);
   const manualStrength = manualRecords.filter((r): r is ManualStrengthPR => r.type === 'strength');
   const manualWods = manualRecords.filter((r): r is ManualWodRecord => r.type === 'wod');
-  const manualStrengthGrouped = groupManualStrengthByExercise(manualStrength);
+  const manualStrengthGrouped = groupByExercise(manualStrength);
 
   return (
-    <div style={styles.page}>
-      <div style={styles.tabs}>
+    <div style={s.page} className="fade-in">
+      {/* Segmented control */}
+      <div style={s.segmented}>
         <button
-          style={tab === 'strength' ? styles.tabActive : styles.tab}
+          style={tab === 'strength' ? s.segActive : s.seg}
           onClick={() => setTab('strength')}
         >
           Strength PRs
         </button>
         <button
-          style={tab === 'wods' ? styles.tabActive : styles.tab}
+          style={tab === 'wods' ? s.segActive : s.seg}
           onClick={() => setTab('wods')}
         >
           WOD Records
         </button>
       </div>
 
-      {/* ===== STRENGTH TAB ===== */}
+      {/* ─── STRENGTH ────────────────────────────────────── */}
       {tab === 'strength' && (
         <>
-          {/* From sessions */}
           {strengthPRs.length > 0 && (
             <>
-              <div style={styles.sectionHeader}>From Sessions</div>
+              <div style={s.firstSectionLabel}>From Sessions</div>
               {Array.from(grouped.entries()).map(([key, prs]) => {
                 const best1RM = Math.max(...prs.map((p) => p.estimated1RM));
                 return (
-                  <div key={key} className="card" style={styles.exerciseGroup}>
-                    <div style={styles.exerciseName}>{prs[0].exercise}</div>
-                    <div style={styles.estimated1rm}>Est. 1RM: {best1RM} kg</div>
+                  <div key={key} className="card" style={s.group}>
+                    <div style={s.exerciseName}>{prs[0].exercise}</div>
+                    <div style={s.est1rm}>Est. 1RM: {best1RM} kg</div>
                     {prs.map((pr, i) => (
-                      <div key={i} style={styles.prRow}>
-                        <span style={styles.repsLabel}>{pr.reps} rep{pr.reps !== 1 ? 's' : ''}</span>
-                        <span style={styles.kilosValue}>{pr.kilos} kg</span>
-                        <span style={styles.dateLabel}>{formatDate(pr.date)}</span>
+                      <div key={i}>
+                        {i > 0 && <div style={{ height: '0.5px', background: 'var(--separator)' }} />}
+                        <div style={s.prRow}>
+                          <span style={s.reps}>{pr.reps} rep{pr.reps !== 1 ? 's' : ''}</span>
+                          <span style={s.kg}>{pr.kilos} kg</span>
+                          <span style={s.dateSmall}>{formatDate(pr.date)}</span>
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -375,147 +397,96 @@ function Records() {
             </>
           )}
 
-          {/* Manual PRs */}
-          <div style={styles.sectionHeader}>Manual PRs</div>
+          <div style={strengthPRs.length > 0 ? s.sectionLabel : s.firstSectionLabel}>Manual PRs</div>
 
-          {manualStrength.length > 0 && (
+          {manualStrength.length > 0 ? (
             Array.from(manualStrengthGrouped.entries()).map(([key, records]) => {
               const best1RM = Math.max(...records.map((r) => r.estimated1RM));
               return (
-                <div key={key} className="card" style={styles.exerciseGroup}>
-                  <div style={styles.exerciseName}>{records[0].exercise}</div>
-                  <div style={styles.estimated1rm}>Est. 1RM: {best1RM} kg</div>
-                  {records.map((r) => (
-                    <div key={r.id} style={styles.prRowDeletable}>
-                      <span style={styles.repsLabel}>{r.reps} rep{r.reps !== 1 ? 's' : ''}</span>
-                      <span>
-                        <span style={styles.kilosValue}>{r.kilos} kg</span>
-                        {r.notes && <div style={styles.notes}>{r.notes}</div>}
-                      </span>
-                      <span style={styles.dateLabel}>{formatDate(r.date)}</span>
-                      <button style={styles.deleteBtn} onClick={() => handleDeleteManual(r.id)} title="Delete">
-                        x
-                      </button>
+                <div key={key} className="card" style={s.group}>
+                  <div style={s.exerciseName}>{records[0].exercise}</div>
+                  <div style={s.est1rm}>Est. 1RM: {best1RM} kg</div>
+                  {records.map((r, i) => (
+                    <div key={r.id}>
+                      {i > 0 && <div style={{ height: '0.5px', background: 'var(--separator)' }} />}
+                      <div style={s.prRowDel}>
+                        <span style={s.reps}>{r.reps} rep{r.reps !== 1 ? 's' : ''}</span>
+                        <span>
+                          <span style={s.kg}>{r.kilos} kg</span>
+                          {r.notes && <div style={s.note}>{r.notes}</div>}
+                        </span>
+                        <span style={s.dateSmall}>{formatDate(r.date)}</span>
+                        <button style={s.delBtn} onClick={() => handleDeleteManual(r.id)}>-</button>
+                      </div>
                     </div>
                   ))}
                 </div>
               );
             })
-          )}
+          ) : !showStrengthForm ? (
+            <div style={s.empty}>No manual PRs yet</div>
+          ) : null}
 
-          {manualStrength.length === 0 && !showStrengthForm && (
-            <div style={{ ...styles.empty, padding: '20px' }}>
-              No manual PRs yet.
-            </div>
-          )}
-
-          {/* Add Strength PR Form */}
           {showStrengthForm ? (
-            <div className="card" style={styles.formCard}>
-              <div style={styles.formTitle}>Add Strength PR</div>
-              <div style={{ marginBottom: 8 }}>
+            <div className="card" style={s.formCard}>
+              <div style={s.formTitle}>New Strength PR</div>
+              <div style={{ marginBottom: 10 }}>
                 <label className="label">Exercise</label>
-                <input
-                  className="input"
-                  placeholder="e.g., Bench Press, Squat..."
-                  value={sExercise}
-                  onChange={(e) => setSExercise(e.target.value)}
-                />
+                <input className="input" placeholder="e.g., Bench Press" value={sExercise} onChange={(e) => setSExercise(e.target.value)} />
               </div>
-              <div style={styles.formRow}>
-                <div style={styles.formField}>
+              <div style={s.formRow}>
+                <div style={s.formField}>
                   <label className="label">Reps</label>
-                  <input
-                    className="input input-sm"
-                    type="number"
-                    inputMode="numeric"
-                    placeholder="5"
-                    value={sReps}
-                    onChange={(e) => setSReps(e.target.value)}
-                  />
+                  <input className="input input-sm" type="number" inputMode="numeric" placeholder="5" value={sReps} onChange={(e) => setSReps(e.target.value)} />
                 </div>
-                <div style={styles.formField}>
+                <div style={s.formField}>
                   <label className="label">Kg</label>
-                  <input
-                    className="input input-sm"
-                    type="number"
-                    inputMode="decimal"
-                    placeholder="100"
-                    value={sKilos}
-                    onChange={(e) => setSKilos(e.target.value)}
-                  />
+                  <input className="input input-sm" type="number" inputMode="decimal" placeholder="100" value={sKilos} onChange={(e) => setSKilos(e.target.value)} />
                 </div>
-                <div style={styles.formField}>
+                <div style={s.formField}>
                   <label className="label">Date</label>
-                  <input
-                    className="input input-sm"
-                    type="date"
-                    value={sDate}
-                    onChange={(e) => setSDate(e.target.value)}
-                  />
+                  <input className="input input-sm" type="date" value={sDate} onChange={(e) => setSDate(e.target.value)} />
                 </div>
               </div>
-              <div style={{ marginBottom: 12 }}>
-                <label className="label">Notes (optional)</label>
-                <input
-                  className="input input-sm"
-                  placeholder="Any context..."
-                  value={sNotes}
-                  onChange={(e) => setSNotes(e.target.value)}
-                />
+              <div style={{ marginBottom: 4 }}>
+                <label className="label">Notes</label>
+                <input className="input input-sm" placeholder="Optional" value={sNotes} onChange={(e) => setSNotes(e.target.value)} />
               </div>
-              <div style={{ display: 'flex', gap: 8 }}>
-                <button
-                  className="btn btn-secondary btn-sm"
-                  onClick={() => setShowStrengthForm(false)}
-                >
-                  Cancel
-                </button>
-                <button
-                  className="btn btn-primary btn-sm"
-                  onClick={handleAddStrengthPR}
-                  disabled={sSaving || !sExercise || !sReps || !sKilos}
-                  style={{ flex: 1 }}
-                >
-                  {sSaving ? 'Saving...' : 'Save PR'}
+              <div style={s.formActions}>
+                <button className="btn btn-secondary btn-sm" onClick={() => setShowStrengthForm(false)} style={{ flex: 1 }}>Cancel</button>
+                <button className="btn btn-primary btn-sm" onClick={handleAddStrengthPR} disabled={sSaving || !sExercise || !sReps || !sKilos} style={{ flex: 2 }}>
+                  {sSaving ? 'Saving...' : 'Save'}
                 </button>
               </div>
             </div>
           ) : (
-            <button
-              className="btn btn-primary btn-block"
-              onClick={() => setShowStrengthForm(true)}
-              style={{ marginTop: 8 }}
-            >
-              + Add Strength PR
-            </button>
+            <button style={s.addBtn} onClick={() => setShowStrengthForm(true)}>+ Add Strength PR</button>
           )}
         </>
       )}
 
-      {/* ===== WODS TAB ===== */}
+      {/* ─── WODs ─────────────────────────────────────────── */}
       {tab === 'wods' && (
         <>
-          {/* From sessions */}
           {wodRecords.length > 0 && (
             <>
-              <div style={styles.sectionHeader}>From Sessions</div>
+              <div style={s.firstSectionLabel}>From Sessions</div>
               {wodRecords.map((record) => (
-                <div key={record.name} className="card" style={styles.wodCard}>
-                  <div style={styles.wodName}>{record.name}</div>
-                  <div style={styles.wodBest}>{formatTime(record.bestTimeSeconds)}</div>
-                  <div style={styles.wodMeta}>
-                    <span>Best on {formatDate(record.date)}</span>
-                    {record.avgHeartRate && <span>Avg HR: {record.avgHeartRate}</span>}
-                    {record.maxHeartRate && <span>Max HR: {record.maxHeartRate}</span>}
+                <div key={record.name} className="card" style={s.wodCard}>
+                  <div style={s.wodName}>{record.name}</div>
+                  <div style={s.wodTime}>{formatTime(record.bestTimeSeconds)}</div>
+                  <div style={s.wodMeta}>
+                    <span>{formatDate(record.date)}</span>
+                    {record.avgHeartRate && <span>Avg {record.avgHeartRate} bpm</span>}
+                    {record.maxHeartRate && <span>Max {record.maxHeartRate} bpm</span>}
                   </div>
                   {record.history.length > 1 && (
                     <>
-                      <div style={styles.historyTitle}>History</div>
+                      <div style={s.histLabel}>History</div>
                       {record.history.map((entry, i) => (
-                        <div key={i} style={styles.historyRow}>
+                        <div key={i} style={s.histRow}>
                           <span>{formatDate(entry.date)}</span>
-                          <span style={i === 0 ? { color: 'var(--accent)', fontWeight: 600 } : undefined}>
+                          <span style={i === 0 ? { color: 'var(--tint)', fontWeight: 600 } : undefined}>
                             {formatTime(entry.timeSeconds)}
                           </span>
                         </div>
@@ -527,139 +498,75 @@ function Records() {
             </>
           )}
 
-          {/* Manual WOD Records */}
-          <div style={styles.sectionHeader}>Manual WOD Records</div>
+          <div style={wodRecords.length > 0 ? s.sectionLabel : s.firstSectionLabel}>Manual Records</div>
 
-          {manualWods.length > 0 && (
+          {manualWods.length > 0 ? (
             manualWods.map((r) => (
-              <div key={r.id} className="card" style={styles.wodCard}>
-                <div style={styles.wodHeader}>
+              <div key={r.id} className="card" style={s.wodCard}>
+                <div style={s.wodHeader}>
                   <div>
-                    <div style={styles.wodName}>{r.name}</div>
-                    <div style={styles.wodBest}>{formatTime(r.timeSeconds)}</div>
+                    <div style={s.wodName}>{r.name}</div>
+                    <div style={s.wodTime}>{formatTime(r.timeSeconds)}</div>
                   </div>
-                  <button style={styles.deleteBtn} onClick={() => handleDeleteManual(r.id)} title="Delete">
-                    x
-                  </button>
+                  <button style={s.delBtn} onClick={() => handleDeleteManual(r.id)}>-</button>
                 </div>
-                {r.description && <div style={styles.wodDescription}>{r.description}</div>}
-                <div style={styles.wodMeta}>
+                {r.description && <div style={s.wodDesc}>{r.description}</div>}
+                <div style={s.wodMeta}>
                   <span>{formatDate(r.date)}</span>
-                  {r.avgHeartRate && <span>Avg HR: {r.avgHeartRate}</span>}
-                  {r.maxHeartRate && <span>Max HR: {r.maxHeartRate}</span>}
+                  {r.avgHeartRate && <span>Avg {r.avgHeartRate} bpm</span>}
+                  {r.maxHeartRate && <span>Max {r.maxHeartRate} bpm</span>}
                 </div>
-                {r.notes && <div style={styles.notes}>{r.notes}</div>}
+                {r.notes && <div style={s.note}>{r.notes}</div>}
               </div>
             ))
-          )}
+          ) : !showWodForm ? (
+            <div style={s.empty}>No manual WOD records yet</div>
+          ) : null}
 
-          {manualWods.length === 0 && !showWodForm && (
-            <div style={{ ...styles.empty, padding: '20px' }}>
-              No manual WOD records yet.
-            </div>
-          )}
-
-          {/* Add WOD Record Form */}
           {showWodForm ? (
-            <div className="card" style={styles.formCard}>
-              <div style={styles.formTitle}>Add WOD Record</div>
-              <div style={{ marginBottom: 8 }}>
+            <div className="card" style={s.formCard}>
+              <div style={s.formTitle}>New WOD Record</div>
+              <div style={{ marginBottom: 10 }}>
                 <label className="label">WOD Name</label>
-                <input
-                  className="input"
-                  placeholder="e.g., Fran, Murph..."
-                  value={wName}
-                  onChange={(e) => setWName(e.target.value)}
-                />
+                <input className="input" placeholder="e.g., Fran" value={wName} onChange={(e) => setWName(e.target.value)} />
               </div>
-              <div style={{ marginBottom: 8 }}>
-                <label className="label">Description (optional)</label>
-                <textarea
-                  className="input"
-                  placeholder="21-15-9 Thrusters & Pull-ups..."
-                  value={wDescription}
-                  onChange={(e) => setWDescription(e.target.value)}
-                  rows={2}
-                />
+              <div style={{ marginBottom: 10 }}>
+                <label className="label">Description</label>
+                <textarea className="input" placeholder="21-15-9 Thrusters & Pull-ups..." value={wDescription} onChange={(e) => setWDescription(e.target.value)} rows={2} />
               </div>
-              <div style={styles.formRow}>
-                <div style={styles.formField}>
+              <div style={s.formRow}>
+                <div style={s.formField}>
                   <label className="label">Time (m:ss)</label>
-                  <input
-                    className="input input-sm"
-                    placeholder="3:30"
-                    value={wTime}
-                    onChange={(e) => setWTime(e.target.value)}
-                  />
+                  <input className="input input-sm" placeholder="3:30" value={wTime} onChange={(e) => setWTime(e.target.value)} />
                 </div>
-                <div style={styles.formField}>
+                <div style={s.formField}>
                   <label className="label">Date</label>
-                  <input
-                    className="input input-sm"
-                    type="date"
-                    value={wDate}
-                    onChange={(e) => setWDate(e.target.value)}
-                  />
+                  <input className="input input-sm" type="date" value={wDate} onChange={(e) => setWDate(e.target.value)} />
                 </div>
               </div>
-              <div style={styles.formRow}>
-                <div style={styles.formField}>
-                  <label className="label">Avg HR (optional)</label>
-                  <input
-                    className="input input-sm"
-                    type="number"
-                    inputMode="numeric"
-                    placeholder="bpm"
-                    value={wAvgHR}
-                    onChange={(e) => setWAvgHR(e.target.value)}
-                  />
+              <div style={s.formRow}>
+                <div style={s.formField}>
+                  <label className="label">Avg HR</label>
+                  <input className="input input-sm" type="number" inputMode="numeric" placeholder="bpm" value={wAvgHR} onChange={(e) => setWAvgHR(e.target.value)} />
                 </div>
-                <div style={styles.formField}>
-                  <label className="label">Max HR (optional)</label>
-                  <input
-                    className="input input-sm"
-                    type="number"
-                    inputMode="numeric"
-                    placeholder="bpm"
-                    value={wMaxHR}
-                    onChange={(e) => setWMaxHR(e.target.value)}
-                  />
+                <div style={s.formField}>
+                  <label className="label">Max HR</label>
+                  <input className="input input-sm" type="number" inputMode="numeric" placeholder="bpm" value={wMaxHR} onChange={(e) => setWMaxHR(e.target.value)} />
                 </div>
               </div>
-              <div style={{ marginBottom: 12 }}>
-                <label className="label">Notes (optional)</label>
-                <input
-                  className="input input-sm"
-                  placeholder="Any context..."
-                  value={wNotes}
-                  onChange={(e) => setWNotes(e.target.value)}
-                />
+              <div style={{ marginBottom: 4 }}>
+                <label className="label">Notes</label>
+                <input className="input input-sm" placeholder="Optional" value={wNotes} onChange={(e) => setWNotes(e.target.value)} />
               </div>
-              <div style={{ display: 'flex', gap: 8 }}>
-                <button
-                  className="btn btn-secondary btn-sm"
-                  onClick={() => setShowWodForm(false)}
-                >
-                  Cancel
-                </button>
-                <button
-                  className="btn btn-primary btn-sm"
-                  onClick={handleAddWodRecord}
-                  disabled={wSaving || !wName || !wTime}
-                  style={{ flex: 1 }}
-                >
-                  {wSaving ? 'Saving...' : 'Save WOD Record'}
+              <div style={s.formActions}>
+                <button className="btn btn-secondary btn-sm" onClick={() => setShowWodForm(false)} style={{ flex: 1 }}>Cancel</button>
+                <button className="btn btn-primary btn-sm" onClick={handleAddWodRecord} disabled={wSaving || !wName || !wTime} style={{ flex: 2 }}>
+                  {wSaving ? 'Saving...' : 'Save'}
                 </button>
               </div>
             </div>
           ) : (
-            <button
-              className="btn btn-primary btn-block"
-              onClick={() => setShowWodForm(true)}
-              style={{ marginTop: 8 }}
-            >
-              + Add WOD Record
-            </button>
+            <button style={s.addBtn} onClick={() => setShowWodForm(true)}>+ Add WOD Record</button>
           )}
         </>
       )}
