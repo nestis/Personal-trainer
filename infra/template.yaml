@@ -20,6 +20,7 @@ Globals:
     Environment:
       Variables:
         SESSIONS_TABLE: !Ref SessionsTable
+        RECORDS_TABLE: !Ref ManualRecordsTable
         API_KEY: !Ref ApiKey
 
 Resources:
@@ -28,6 +29,19 @@ Resources:
     Type: AWS::DynamoDB::Table
     Properties:
       TableName: !Sub 'WorkoutSessions-${Environment}'
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: id
+          KeyType: HASH
+
+  # DynamoDB Table for Manual Records
+  ManualRecordsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub 'ManualRecords-${Environment}'
       BillingMode: PAY_PER_REQUEST
       AttributeDefinitions:
         - AttributeName: id
@@ -45,6 +59,8 @@ Resources:
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref SessionsTable
+        - DynamoDBCrudPolicy:
+            TableName: !Ref ManualRecordsTable
       Events:
         HealthCheck:
           Type: Api

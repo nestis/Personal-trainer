@@ -1,4 +1,4 @@
-import { Session, StrengthPR, WodRecord } from '../types';
+import { Session, StrengthPR, WodRecord, ManualRecord, ManualStrengthPR, ManualWodRecord } from '../types';
 
 const API_BASE = import.meta.env.VITE_API_URL || '/api';
 const API_KEY = import.meta.env.VITE_API_KEY || '';
@@ -59,5 +59,43 @@ export const api = {
 
   getWodRecords(): Promise<WodRecord[]> {
     return request('/records/wods');
+  },
+
+  // Manual records
+  listManualRecords(type?: 'strength' | 'wod'): Promise<ManualRecord[]> {
+    const query = type ? `?type=${type}` : '';
+    return request(`/manual-records${query}`);
+  },
+
+  createManualStrengthPR(data: {
+    exercise: string;
+    reps: number;
+    kilos: number;
+    date: string;
+    notes?: string;
+  }): Promise<ManualStrengthPR> {
+    return request('/manual-records/strength', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  createManualWodRecord(data: {
+    name: string;
+    description?: string;
+    timeSeconds: number;
+    avgHeartRate?: number;
+    maxHeartRate?: number;
+    date: string;
+    notes?: string;
+  }): Promise<ManualWodRecord> {
+    return request('/manual-records/wod', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  deleteManualRecord(id: string): Promise<void> {
+    return request(`/manual-records/${id}`, { method: 'DELETE' });
   },
 };

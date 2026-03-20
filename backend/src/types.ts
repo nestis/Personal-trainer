@@ -69,3 +69,33 @@ export interface UpdateSessionInput {
   wod?: WOD;
   notes?: string;
 }
+
+// Manual records (user-entered, not derived from sessions)
+export interface ManualStrengthPR {
+  id: string;
+  type: 'strength';
+  exercise: string;
+  reps: number;
+  kilos: number;
+  estimated1RM: number;
+  date: string;
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ManualWodRecord {
+  id: string;
+  type: 'wod';
+  name: string;
+  description?: string;
+  timeSeconds: number;
+  avgHeartRate?: number;
+  maxHeartRate?: number;
+  date: string;
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type ManualRecord = ManualStrengthPR | ManualWodRecord;
