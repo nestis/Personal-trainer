@@ -5,3 +5,4 @@ dist/
 *.js.map
 .aws-sam/
 .vite/
+*.tsbuildinfo
