@@ -1,0 +1,266 @@
+name: Deploy to AWS
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Target environment'
+        required: true
+        default: 'prod'
+        type: choice
+        options:
+          - dev
+          - prod
+
+permissions:
+  id-token: write   # OIDC token for AWS auth
+  contents: read
+
+concurrency:
+  group: deploy-${{ github.event.inputs.environment || 'prod' }}
+  cancel-in-progress: false   # Never cancel an in-progress deploy
+
+env:
+  AWS_REGION: eu-west-1
+  ENVIRONMENT: ${{ github.event.inputs.environment || 'prod' }}
+  STACK_NAME: workout-tracker-${{ github.event.inputs.environment || 'prod' }}
+  NODE_VERSION: '22'
+
+jobs:
+  # ────────────────────────────────────────────────────
+  # Job 1: Type-check backend and frontend in parallel
+  # ────────────────────────────────────────────────────
+  typecheck:
+    name: Type Check
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        project: [backend, frontend]
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: ${{ matrix.project }}/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+        working-directory: ${{ matrix.project }}
+
+      - name: Type check
+        run: |
+          if [ "${{ matrix.project }}" = "backend" ]; then
+            npx tsc --noEmit
+          else
+            npx tsc -b
+          fi
+        working-directory: ${{ matrix.project }}
+
+  # ────────────────────────────────────────────────────
+  # Job 2: Build backend Lambda artifact
+  # ────────────────────────────────────────────────────
+  build-backend:
+    name: Build Backend
+    needs: typecheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+        working-directory: backend
+
+      - name: Build Lambda package
+        run: npm run lambda
+        working-directory: backend
+
+      - name: Install production dependencies in dist
+        run: |
+          cd backend/dist
+          npm ci --omit=dev
+
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: backend-dist
+          path: backend/dist/
+          retention-days: 1
+
+  # ────────────────────────────────────────────────────
+  # Job 3: Build frontend SPA
+  # ────────────────────────────────────────────────────
+  build-frontend:
+    name: Build Frontend
+    needs: typecheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+        working-directory: frontend
+
+      - name: Build
+        run: npm run build
+        working-directory: frontend
+        env:
+          VITE_API_URL: /api
+
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: frontend-dist
+          path: frontend/dist/
+          retention-days: 1
+
+  # ────────────────────────────────────────────────────
+  # Job 4: Deploy infrastructure + backend via SAM
+  # ────────────────────────────────────────────────────
+  deploy-backend:
+    name: Deploy Infrastructure & Backend
+    needs: build-backend
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.environment || 'prod' }}
+    outputs:
+      frontend-bucket: ${{ steps.outputs.outputs.frontend-bucket }}
+      cloudfront-id: ${{ steps.outputs.outputs.cloudfront-id }}
+      api-url: ${{ steps.outputs.outputs.api-url }}
+      frontend-url: ${{ steps.outputs.outputs.frontend-url }}
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - uses: aws-actions/configure-aws-credentials@e3dd6a429d7300a6a4c196c26e071d42e0343502 # v4.0.2
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - uses: aws-actions/setup-sam@819221da6eef60886575f16eee1526142f498037 # v2.1.0
+        with:
+          use-installer: true
+
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: backend-dist
+          path: backend/dist/
+
+      - name: SAM Build
+        run: sam build
+        working-directory: infra
+
+      - name: SAM Deploy
+        run: |
+          sam deploy \
+            --stack-name "${{ env.STACK_NAME }}" \
+            --parameter-overrides \
+              "JwtSecret=${{ secrets.JWT_SECRET }}" \
+              "Environment=${{ env.ENVIRONMENT }}" \
+            --capabilities CAPABILITY_IAM \
+            --region "${{ env.AWS_REGION }}" \
+            --no-confirm-changeset \
+            --no-fail-on-empty-changeset
+        working-directory: infra
+
+      - name: Get stack outputs
+        id: outputs
+        run: |
+          OUTPUTS=$(aws cloudformation describe-stacks \
+            --stack-name "${{ env.STACK_NAME }}" \
+            --region "${{ env.AWS_REGION }}" \
+            --query 'Stacks[0].Outputs' \
+            --output json)
+
+          get_output() {
+            echo "$OUTPUTS" | jq -r ".[] | select(.OutputKey==\"$1\") | .OutputValue"
+          }
+
+          echo "frontend-bucket=$(get_output FrontendBucketName)" >> "$GITHUB_OUTPUT"
+          echo "cloudfront-id=$(get_output CloudFrontDistributionId)" >> "$GITHUB_OUTPUT"
+          echo "api-url=$(get_output ApiUrl)" >> "$GITHUB_OUTPUT"
+          echo "frontend-url=$(get_output FrontendUrl)" >> "$GITHUB_OUTPUT"
+
+  # ────────────────────────────────────────────────────
+  # Job 5: Deploy frontend to S3 + invalidate CloudFront
+  # ────────────────────────────────────────────────────
+  deploy-frontend:
+    name: Deploy Frontend
+    needs: [build-frontend, deploy-backend]
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.environment || 'prod' }}
+    steps:
+      - uses: aws-actions/configure-aws-credentials@e3dd6a429d7300a6a4c196c26e071d42e0343502 # v4.0.2
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: frontend-dist
+          path: frontend-dist/
+
+      - name: Upload to S3
+        run: |
+          aws s3 sync frontend-dist/ \
+            "s3://${{ needs.deploy-backend.outputs.frontend-bucket }}" \
+            --delete \
+            --cache-control "public, max-age=31536000, immutable" \
+            --exclude "index.html" \
+            --exclude "*.json"
+
+          aws s3 cp frontend-dist/index.html \
+            "s3://${{ needs.deploy-backend.outputs.frontend-bucket }}/index.html" \
+            --cache-control "no-cache, no-store, must-revalidate"
+
+      - name: Invalidate CloudFront cache
+        run: |
+          aws cloudfront create-invalidation \
+            --distribution-id "${{ needs.deploy-backend.outputs.cloudfront-id }}" \
+            --paths "/*"
+
+  # ────────────────────────────────────────────────────
+  # Job 6: Post-deploy health check
+  # ────────────────────────────────────────────────────
+  verify:
+    name: Verify Deployment
+    needs: [deploy-backend, deploy-frontend]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Health check API
+        run: |
+          API_URL="${{ needs.deploy-backend.outputs.api-url }}"
+          echo "Checking $API_URL/health ..."
+
+          for i in 1 2 3 4 5; do
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$API_URL/health" || true)
+            if [ "$STATUS" = "200" ]; then
+              echo "Health check passed (attempt $i)"
+              exit 0
+            fi
+            echo "Attempt $i: got $STATUS, retrying in 10s..."
+            sleep 10
+          done
+
+          echo "Health check failed after 5 attempts"
+          exit 1
+
+      - name: Print deployment URLs
+        run: |
+          echo "## Deployment Complete" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Resource | URL |" >> "$GITHUB_STEP_SUMMARY"
+          echo "|----------|-----|" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Frontend | ${{ needs.deploy-backend.outputs.frontend-url }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| API | ${{ needs.deploy-backend.outputs.api-url }} |" >> "$GITHUB_STEP_SUMMARY"
