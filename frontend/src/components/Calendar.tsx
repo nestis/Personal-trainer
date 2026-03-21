@@ -10,11 +10,12 @@ interface CalendarProps {
   sessionDates: Record<string, SessionStatus>;
 }
 
-const DAY_LABELS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+const DAY_LABELS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
 
 function getCalendarDays(year: number, month: number): Date[] {
   const first = new Date(year, month, 1);
-  const startOffset = first.getDay();
+  // Monday-based offset: getDay() returns 0=Sun, so (day + 6) % 7 gives 0=Mon
+  const startOffset = (first.getDay() + 6) % 7;
   const days: Date[] = [];
   for (let i = -startOffset; i < 42; i++) {
     days.push(new Date(year, month, 1 + i));
@@ -35,17 +36,17 @@ const s: Record<string, React.CSSProperties> = {
   container: {
     background: 'var(--bg-grouped-secondary)',
     borderRadius: 'var(--radius)',
-    padding: '12px 8px 8px',
+    padding: '8px 6px 6px',
     boxShadow: '0 1px 3px rgba(0,0,0,0.3), 0 4px 12px rgba(0,0,0,0.15)',
   },
   header: {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: '0 8px 10px',
+    padding: '0 6px 6px',
   },
   monthTitle: {
-    fontSize: 17,
+    fontSize: 15,
     fontWeight: 600,
     letterSpacing: -0.2,
   },
@@ -53,7 +54,7 @@ const s: Record<string, React.CSSProperties> = {
     background: 'none',
     border: 'none',
     color: 'var(--tint)',
-    padding: 8,
+    padding: 6,
     cursor: 'pointer',
     borderRadius: 'var(--radius-xs)',
     display: 'flex',
@@ -63,46 +64,46 @@ const s: Record<string, React.CSSProperties> = {
   grid: {
     display: 'grid',
     gridTemplateColumns: 'repeat(7, 1fr)',
-    gap: 2,
+    gap: 1,
     textAlign: 'center' as const,
   },
   dayLabel: {
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: 600,
     color: 'var(--text-tertiary)',
     textTransform: 'uppercase' as const,
-    padding: '4px 0 6px',
+    padding: '2px 0 4px',
   },
   dayCell: {
     display: 'flex',
     flexDirection: 'column' as const,
     alignItems: 'center',
     justifyContent: 'center',
-    padding: '4px 0',
+    padding: '2px 0',
     cursor: 'pointer',
     borderRadius: 'var(--radius-xs)',
-    minHeight: 42,
+    minHeight: 34,
   },
   dayNumber: {
-    fontSize: 15,
+    fontSize: 13,
     fontWeight: 400,
-    width: 32,
-    height: 32,
-    lineHeight: '32px',
+    width: 26,
+    height: 26,
+    lineHeight: '26px',
     textAlign: 'center' as const,
     borderRadius: '50%',
     transition: 'background 0.15s ease',
   },
   dot: {
-    width: 6,
-    height: 6,
+    width: 5,
+    height: 5,
     borderRadius: '50%',
-    marginTop: 2,
+    marginTop: 1,
   },
   dotPlaceholder: {
-    width: 6,
-    height: 6,
-    marginTop: 2,
+    width: 5,
+    height: 5,
+    marginTop: 1,
   },
 };
 
