@@ -19,7 +19,7 @@ This is a multi-user workout tracking app with a monorepo structure:
 
 - **CI/CD:** GitHub Actions
 - **IaC:** AWS SAM (Serverless Application Model) / CloudFormation
-- **AWS Auth:** OIDC via `aws-actions/configure-aws-credentials` (no long-lived keys)
+- **AWS Auth:** Static credentials via `aws-actions/configure-aws-credentials` (`AWS_ACCESS_KEY_ID` + `AWS_SECRET_ACCESS_KEY` as GitHub Secrets)
 - **Compute:** AWS Lambda (Node.js 22.x, 256MB, 30s timeout)
 - **API:** Amazon API Gateway (REST API)
 - **Database:** Amazon DynamoDB (3 tables, pay-per-request, `DeletionPolicy: Retain`)
@@ -103,8 +103,8 @@ aws cloudfront create-invalidation --distribution-id <dist-id> --paths "/*"
 
 ### Security
 
-1. **OIDC for AWS** — use `aws-actions/configure-aws-credentials` with `role-to-assume`, never store AWS access keys as secrets
-2. **Least privilege** — IAM role for GitHub Actions scoped to specific resources (S3 bucket, CloudFormation stack, Lambda, DynamoDB)
+1. **AWS credentials** — store `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` as GitHub repository secrets, never hardcode in workflows. Consider migrating to OIDC for enhanced security in the future
+2. **Least privilege** — IAM user/role for GitHub Actions scoped to specific resources (S3 bucket, CloudFormation stack, Lambda, DynamoDB)
 3. **Secrets via GitHub Secrets** — JWT_SECRET and other sensitive values stored as repository secrets, passed as SAM parameter overrides
 4. **Pin action versions** — always pin third-party actions to a full SHA, not just a tag
 5. **No secrets in logs** — use `::add-mask::` for any dynamic secret values
@@ -147,7 +147,7 @@ aws cloudfront create-invalidation --distribution-id <dist-id> --paths "/*"
 
 ## When Reviewing Workflows
 
-1. Check that no long-lived AWS credentials are used (must be OIDC)
+1. Check that AWS credentials are stored as GitHub Secrets (never hardcoded)
 2. Verify DynamoDB tables are never deleted or replaced in any step
 3. Ensure secrets are not logged or exposed
 4. Confirm `npm ci` (not `npm install`) is used for reproducible builds
