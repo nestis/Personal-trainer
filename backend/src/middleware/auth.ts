@@ -1,33 +1,29 @@
 import { Request, Response, NextFunction } from 'express';
-import crypto from 'crypto';
+import { verifyToken } from '../services/auth';
+import { AuthPayload } from '../types';
 
-export function apiKeyAuth(req: Request, res: Response, next: NextFunction): void {
-  const apiKey = req.headers['x-api-key'];
-  const expectedKey = process.env.API_KEY;
+declare global {
+  namespace Express {
+    interface Request {
+      user?: AuthPayload;
+    }
+  }
+}
 
-  if (!expectedKey) {
-    res.status(500).json({ error: 'API key not configured on server' });
+export function jwtAuth(req: Request, res: Response, next: NextFunction): void {
+  const header = req.headers.authorization;
+
+  if (!header || !header.startsWith('Bearer ')) {
+    res.status(401).json({ error: 'Unauthorized: missing token' });
     return;
   }
 
-  if (!apiKey || typeof apiKey !== 'string') {
-    res.status(401).json({ error: 'Unauthorized: invalid API key' });
-    return;
+  const token = header.slice(7);
+
+  try {
+    req.user = verifyToken(token);
+    next();
+  } catch {
+    res.status(401).json({ error: 'Unauthorized: invalid or expired token' });
   }
-
-  // Use constant-time comparison to prevent timing attacks.
-  // If lengths differ, compare expectedKey against itself to avoid
-  // revealing the expected key length through timing.
-  const apiKeyBuffer = Buffer.from(apiKey);
-  const expectedKeyBuffer = Buffer.from(expectedKey);
-
-  if (
-    apiKeyBuffer.length !== expectedKeyBuffer.length ||
-    !crypto.timingSafeEqual(apiKeyBuffer, expectedKeyBuffer)
-  ) {
-    res.status(401).json({ error: 'Unauthorized: invalid API key' });
-    return;
-  }
-
-  next();
 }

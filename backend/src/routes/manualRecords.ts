@@ -11,12 +11,13 @@ const router = Router();
 // List manual records (optional ?type=strength|wod)
 router.get('/', async (req: Request, res: Response) => {
   try {
+    const userId = req.user!.userId;
     const type = req.query.type as string | undefined;
     if (type !== undefined && type !== 'strength' && type !== 'wod') {
       res.status(400).json({ error: 'type must be "strength" or "wod"' });
       return;
     }
-    const records = await listManualRecords(type);
+    const records = await listManualRecords(userId, type);
     res.json(records);
   } catch (error) {
     console.error('Error listing manual records:', error);
@@ -27,6 +28,7 @@ router.get('/', async (req: Request, res: Response) => {
 // Create a manual strength PR
 router.post('/strength', async (req: Request, res: Response) => {
   try {
+    const userId = req.user!.userId;
     const { exercise, reps, kilos, date, notes } = req.body;
     if (!exercise || !date) {
       res.status(400).json({ error: 'exercise, reps, kilos, and date are required' });
@@ -40,7 +42,7 @@ router.post('/strength', async (req: Request, res: Response) => {
       res.status(400).json({ error: 'kilos must be a positive number' });
       return;
     }
-    const record = await createManualStrengthPR({ exercise, reps, kilos, date, notes });
+    const record = await createManualStrengthPR(userId, { exercise, reps, kilos, date, notes });
     res.status(201).json(record);
   } catch (error) {
     console.error('Error creating manual strength PR:', error);
@@ -51,6 +53,7 @@ router.post('/strength', async (req: Request, res: Response) => {
 // Create a manual WOD record
 router.post('/wod', async (req: Request, res: Response) => {
   try {
+    const userId = req.user!.userId;
     const { name, description, timeSeconds, totalReps, avgHeartRate, maxHeartRate, date, notes } = req.body;
     if (!name || !date) {
       res.status(400).json({ error: 'name, timeSeconds, and date are required' });
@@ -60,7 +63,7 @@ router.post('/wod', async (req: Request, res: Response) => {
       res.status(400).json({ error: 'timeSeconds must be a positive number' });
       return;
     }
-    const record = await createManualWodRecord({
+    const record = await createManualWodRecord(userId, {
       name, description, timeSeconds, totalReps, avgHeartRate, maxHeartRate, date, notes,
     });
     res.status(201).json(record);
@@ -73,7 +76,8 @@ router.post('/wod', async (req: Request, res: Response) => {
 // Delete a manual record
 router.delete('/:id', async (req: Request, res: Response) => {
   try {
-    const deleted = await deleteManualRecord(req.params.id);
+    const userId = req.user!.userId;
+    const deleted = await deleteManualRecord(userId, req.params.id);
     if (!deleted) {
       res.status(404).json({ error: 'Record not found' });
       return;

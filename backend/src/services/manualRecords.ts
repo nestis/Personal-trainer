@@ -2,7 +2,7 @@ import {
   PutCommand,
   GetCommand,
   DeleteCommand,
-  ScanCommand,
+  QueryCommand,
 } from '@aws-sdk/lib-dynamodb';
 import { ManualRecord, ManualStrengthPR, ManualWodRecord } from '../types';
 import { v4 as uuidv4 } from 'uuid';
@@ -11,7 +11,7 @@ import { estimate1RM } from '../utils/formulas';
 
 const TABLE_NAME = process.env.RECORDS_TABLE || 'ManualRecords';
 
-export async function createManualStrengthPR(input: {
+export async function createManualStrengthPR(userId: string, input: {
   exercise: string;
   reps: number;
   kilos: number;
@@ -19,8 +19,9 @@ export async function createManualStrengthPR(input: {
   notes?: string;
 }): Promise<ManualStrengthPR> {
   const now = new Date().toISOString();
-  const record: ManualStrengthPR = {
+  const record: ManualStrengthPR & { userId: string } = {
     id: uuidv4(),
+    userId,
     type: 'strength',
     exercise: input.exercise,
     reps: input.reps,
@@ -39,7 +40,7 @@ export async function createManualStrengthPR(input: {
   return record;
 }
 
-export async function createManualWodRecord(input: {
+export async function createManualWodRecord(userId: string, input: {
   name: string;
   description?: string;
   timeSeconds: number;
@@ -50,8 +51,9 @@ export async function createManualWodRecord(input: {
   notes?: string;
 }): Promise<ManualWodRecord> {
   const now = new Date().toISOString();
-  const record: ManualWodRecord = {
+  const record: ManualWodRecord & { userId: string } = {
     id: uuidv4(),
+    userId,
     type: 'wod',
     name: input.name,
     ...(input.description !== undefined && { description: input.description }),
@@ -72,14 +74,19 @@ export async function createManualWodRecord(input: {
   return record;
 }
 
-export async function getManualRecord(id: string): Promise<ManualRecord | null> {
+export async function getManualRecord(userId: string, id: string): Promise<ManualRecord | null> {
   const result = await docClient.send(
     new GetCommand({ TableName: TABLE_NAME, Key: { id } })
   );
-  return (result.Item as ManualRecord) || null;
+  const item = result.Item as (ManualRecord & { userId?: string }) | undefined;
+  if (!item || item.userId !== userId) return null;
+  return item;
 }
 
-export async function deleteManualRecord(id: string): Promise<boolean> {
+export async function deleteManualRecord(userId: string, id: string): Promise<boolean> {
+  const existing = await getManualRecord(userId, id);
+  if (!existing) return false;
+
   try {
     await docClient.send(
       new DeleteCommand({
@@ -101,14 +108,18 @@ export async function deleteManualRecord(id: string): Promise<boolean> {
   }
 }
 
-export async function listManualRecords(type?: 'strength' | 'wod'): Promise<ManualRecord[]> {
+export async function listManualRecords(userId: string, type?: 'strength' | 'wod'): Promise<ManualRecord[]> {
   let items: ManualRecord[] = [];
   let lastKey: Record<string, any> | undefined;
 
   do {
     const result = await docClient.send(
-      new ScanCommand({
+      new QueryCommand({
         TableName: TABLE_NAME,
+        IndexName: 'userId-date-index',
+        KeyConditionExpression: 'userId = :uid',
+        ExpressionAttributeValues: { ':uid': userId },
+        ScanIndexForward: false,
         ExclusiveStartKey: lastKey,
       })
     );
@@ -119,9 +130,6 @@ export async function listManualRecords(type?: 'strength' | 'wod'): Promise<Manu
   if (type) {
     items = items.filter((r) => r.type === type);
   }
-
-  // Sort by date descending
-  items.sort((a, b) => b.date.localeCompare(a.date));
 
   return items;
 }

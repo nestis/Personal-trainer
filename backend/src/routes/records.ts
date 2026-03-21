@@ -4,9 +4,10 @@ import { getStrengthPRs, getWodRecords } from '../services/records';
 const router = Router();
 
 // Get all strength personal records
-router.get('/strength', async (_req: Request, res: Response) => {
+router.get('/strength', async (req: Request, res: Response) => {
   try {
-    const prs = await getStrengthPRs();
+    const userId = req.user!.userId;
+    const prs = await getStrengthPRs(userId);
     res.json(prs);
   } catch (error) {
     console.error('Error getting strength PRs:', error);
@@ -15,9 +16,10 @@ router.get('/strength', async (_req: Request, res: Response) => {
 });
 
 // Get all WOD time records
-router.get('/wods', async (_req: Request, res: Response) => {
+router.get('/wods', async (req: Request, res: Response) => {
   try {
-    const records = await getWodRecords();
+    const userId = req.user!.userId;
+    const records = await getWodRecords(userId);
     res.json(records);
   } catch (error) {
     console.error('Error getting WOD records:', error);

@@ -2,7 +2,7 @@ import {
   PutCommand,
   GetCommand,
   DeleteCommand,
-  ScanCommand,
+  QueryCommand,
 } from '@aws-sdk/lib-dynamodb';
 import { Session, CreateSessionInput, UpdateSessionInput } from '../types';
 import { v4 as uuidv4 } from 'uuid';
@@ -10,10 +10,11 @@ import { docClient } from './db-client';
 
 const TABLE_NAME = process.env.SESSIONS_TABLE || 'WorkoutSessions';
 
-export async function createSession(input: CreateSessionInput): Promise<Session> {
+export async function createSession(userId: string, input: CreateSessionInput): Promise<Session> {
   const now = new Date().toISOString();
-  const session: Session = {
+  const session: Session & { userId: string } = {
     id: uuidv4(),
+    userId,
     date: input.date,
     status: 'planned',
     strength: input.strength,
@@ -33,7 +34,7 @@ export async function createSession(input: CreateSessionInput): Promise<Session>
   return session;
 }
 
-export async function getSession(id: string): Promise<Session | null> {
+export async function getSession(userId: string, id: string): Promise<Session | null> {
   const result = await docClient.send(
     new GetCommand({
       TableName: TABLE_NAME,
@@ -41,14 +42,18 @@ export async function getSession(id: string): Promise<Session | null> {
     })
   );
 
-  return (result.Item as Session) || null;
+  const item = result.Item as (Session & { userId?: string }) | undefined;
+  if (!item || item.userId !== userId) return null;
+
+  return item;
 }
 
 export async function updateSession(
+  userId: string,
   id: string,
   input: UpdateSessionInput
 ): Promise<Session | null> {
-  const existing = await getSession(id);
+  const existing = await getSession(userId, id);
   if (!existing) return null;
 
   const updatedFields: Partial<Session> = {};
@@ -59,10 +64,11 @@ export async function updateSession(
   if (input.wod !== undefined) updatedFields.wod = input.wod;
   if (input.notes !== undefined) updatedFields.notes = input.notes;
 
-  const updated: Session = {
+  const updated: Session & { userId: string } = {
     ...existing,
     ...updatedFields,
     id,
+    userId,
     createdAt: existing.createdAt,
     updatedAt: new Date().toISOString(),
   };
@@ -78,7 +84,11 @@ export async function updateSession(
   return updated;
 }
 
-export async function deleteSession(id: string): Promise<boolean> {
+export async function deleteSession(userId: string, id: string): Promise<boolean> {
+  // Verify ownership first
+  const existing = await getSession(userId, id);
+  if (!existing) return false;
+
   try {
     await docClient.send(
       new DeleteCommand({
@@ -101,16 +111,40 @@ export async function deleteSession(id: string): Promise<boolean> {
 }
 
 export async function listSessions(
+  userId: string,
   startDate?: string,
   endDate?: string
 ): Promise<Session[]> {
   let items: Session[] = [];
   let lastKey: Record<string, any> | undefined;
 
+  // Build key condition and filter expressions
+  let keyCondition = 'userId = :uid';
+  const exprValues: Record<string, any> = { ':uid': userId };
+
+  if (startDate && endDate) {
+    keyCondition += ' AND #d BETWEEN :start AND :end';
+    exprValues[':start'] = startDate;
+    exprValues[':end'] = endDate;
+  } else if (startDate) {
+    keyCondition += ' AND #d >= :start';
+    exprValues[':start'] = startDate;
+  } else if (endDate) {
+    keyCondition += ' AND #d <= :end';
+    exprValues[':end'] = endDate;
+  }
+
+  const usesDates = startDate || endDate;
+
   do {
     const result = await docClient.send(
-      new ScanCommand({
+      new QueryCommand({
         TableName: TABLE_NAME,
+        IndexName: 'userId-date-index',
+        KeyConditionExpression: keyCondition,
+        ExpressionAttributeValues: exprValues,
+        ...(usesDates && { ExpressionAttributeNames: { '#d': 'date' } }),
+        ScanIndexForward: false, // descending by date
         ExclusiveStartKey: lastKey,
       })
     );
@@ -118,17 +152,6 @@ export async function listSessions(
     items = items.concat((result.Items as Session[]) || []);
     lastKey = result.LastEvaluatedKey;
   } while (lastKey);
-
-  // Filter by date range in memory (fine for single-user volume)
-  if (startDate) {
-    items = items.filter((s) => s.date >= startDate);
-  }
-  if (endDate) {
-    items = items.filter((s) => s.date <= endDate);
-  }
-
-  // Sort by date descending
-  items.sort((a, b) => b.date.localeCompare(a.date));
 
   return items;
 }

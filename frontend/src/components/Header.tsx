@@ -1,4 +1,5 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { useAuth } from '../hooks/useAuth';
 
 const s: Record<string, React.CSSProperties> = {
   header: {
@@ -85,6 +86,21 @@ const s: Record<string, React.CSSProperties> = {
     alignItems: 'center',
     gap: 4,
   },
+  avatar: {
+    width: 28,
+    height: 28,
+    borderRadius: '50%',
+    background: 'var(--fill)',
+    color: 'var(--text-secondary)',
+    fontSize: 13,
+    fontWeight: 600,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    cursor: 'pointer',
+    border: 'none',
+    transition: 'background 0.15s ease',
+  },
 };
 
 function getPageTitle(pathname: string): string | null {
@@ -97,10 +113,18 @@ function getPageTitle(pathname: string): string | null {
 function Header() {
   const location = useLocation();
   const navigate = useNavigate();
+  const { user, logout } = useAuth();
   const isHome = location.pathname === '/';
   const isRecords = location.pathname === '/records';
   const isSubPage = !isHome && !isRecords;
   const pageTitle = getPageTitle(location.pathname);
+
+  const initial = user?.displayName?.charAt(0).toUpperCase() || '?';
+
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
+  };
 
   return (
     <header style={s.header}>
@@ -131,6 +155,13 @@ function Header() {
               +
             </Link>
           )}
+          <button
+            style={s.avatar}
+            onClick={handleLogout}
+            title={`${user?.displayName} — Sign out`}
+          >
+            {initial}
+          </button>
         </div>
       </div>
     </header>

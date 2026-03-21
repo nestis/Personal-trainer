@@ -3,13 +3,10 @@ Transform: AWS::Serverless-2016-10-31
 Description: "Personal Trainer - Full-stack serverless workout tracking (API, database, frontend hosting)"
 
 Parameters:
-  ApiKey:
+  JwtSecret:
     Type: String
     NoEcho: true
-    Description: API key for authentication
-    # NOTE: For a production multi-user app, this should be stored in SSM Parameter Store
-    # as a SecureString and referenced via dynamic references (e.g. {{resolve:ssm-secure:...}}).
-    # The NoEcho parameter approach is acceptable for this single-user personal app.
+    Description: Secret key for signing JWT tokens
   Environment:
     Type: String
     Default: prod
@@ -24,7 +21,8 @@ Globals:
       Variables:
         SESSIONS_TABLE: !Ref SessionsTable
         RECORDS_TABLE: !Ref ManualRecordsTable
-        API_KEY: !Ref ApiKey
+        USERS_TABLE: !Ref UsersTable
+        JWT_SECRET: !Ref JwtSecret
     Tags:
       Project: workout-tracker
       Environment: !Ref Environment
@@ -37,7 +35,42 @@ Globals:
         ThrottlingRateLimit: 5
 
 Resources:
-  # DynamoDB Table
+  # DynamoDB Table for Users
+  UsersTable:
+    Type: AWS::DynamoDB::Table
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      TableName: !Sub 'Users-${Environment}'
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: id
+          AttributeType: S
+        - AttributeName: email
+          AttributeType: S
+      KeySchema:
+        - AttributeName: id
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: email-index
+          KeySchema:
+            - AttributeName: email
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
+      SSESpecification:
+        SSEEnabled: true
+      Tags:
+        - Key: Project
+          Value: workout-tracker
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: ManagedBy
+          Value: SAM
+
+  # DynamoDB Table for Workout Sessions
   SessionsTable:
     Type: AWS::DynamoDB::Table
     DeletionPolicy: Retain
@@ -48,9 +81,22 @@ Resources:
       AttributeDefinitions:
         - AttributeName: id
           AttributeType: S
+        - AttributeName: userId
+          AttributeType: S
+        - AttributeName: date
+          AttributeType: S
       KeySchema:
         - AttributeName: id
           KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: userId-date-index
+          KeySchema:
+            - AttributeName: userId
+              KeyType: HASH
+            - AttributeName: date
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
       PointInTimeRecoverySpecification:
         PointInTimeRecoveryEnabled: true
       SSESpecification:
@@ -74,9 +120,22 @@ Resources:
       AttributeDefinitions:
         - AttributeName: id
           AttributeType: S
+        - AttributeName: userId
+          AttributeType: S
+        - AttributeName: date
+          AttributeType: S
       KeySchema:
         - AttributeName: id
           KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: userId-date-index
+          KeySchema:
+            - AttributeName: userId
+              KeyType: HASH
+            - AttributeName: date
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
       PointInTimeRecoverySpecification:
         PointInTimeRecoveryEnabled: true
       SSESpecification:
@@ -101,6 +160,8 @@ Resources:
             TableName: !Ref SessionsTable
         - DynamoDBCrudPolicy:
             TableName: !Ref ManualRecordsTable
+        - DynamoDBCrudPolicy:
+            TableName: !Ref UsersTable
       Events:
         HealthCheck:
           Type: Api
@@ -215,6 +276,9 @@ Outputs:
   ManualRecordsTableName:
     Description: DynamoDB manual records table name
     Value: !Ref ManualRecordsTable
+  UsersTableName:
+    Description: DynamoDB users table name
+    Value: !Ref UsersTable
   CloudFrontDistributionId:
     Description: CloudFront distribution ID for cache invalidation
     Value: !Ref FrontendDistribution

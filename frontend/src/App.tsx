@@ -1,28 +1,61 @@
-import { Routes, Route, useLocation } from 'react-router-dom';
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import SessionList from './pages/SessionList';
 import SessionForm from './pages/SessionForm';
 import SessionDetail from './pages/SessionDetail';
 import Records from './pages/Records';
+import Login from './pages/Login';
+import Register from './pages/Register';
 import Header from './components/Header';
+import Spinner from './components/Spinner';
+import { AuthProvider, useAuth } from './hooks/useAuth';
 
-function App() {
+function ProtectedRoute({ children }: { children: React.ReactNode }) {
+  const { user, loading } = useAuth();
+
+  if (loading) return <Spinner />;
+  if (!user) return <Navigate to="/login" replace />;
+
+  return <>{children}</>;
+}
+
+function PublicOnlyRoute({ children }: { children: React.ReactNode }) {
+  const { user, loading } = useAuth();
+
+  if (loading) return <Spinner />;
+  if (user) return <Navigate to="/" replace />;
+
+  return <>{children}</>;
+}
+
+function AppRoutes() {
   const location = useLocation();
+  const { user } = useAuth();
 
   return (
     <>
-      <Header />
+      {user && <Header />}
       <main className="container" style={{ paddingBottom: '24px', flex: 1 }}>
         <div key={location.pathname} className="fade-in">
           <Routes location={location}>
-            <Route path="/" element={<SessionList />} />
-            <Route path="/new" element={<SessionForm />} />
-            <Route path="/session/:id" element={<SessionDetail />} />
-            <Route path="/session/:id/edit" element={<SessionForm />} />
-            <Route path="/records" element={<Records />} />
+            <Route path="/login" element={<PublicOnlyRoute><Login /></PublicOnlyRoute>} />
+            <Route path="/register" element={<PublicOnlyRoute><Register /></PublicOnlyRoute>} />
+            <Route path="/" element={<ProtectedRoute><SessionList /></ProtectedRoute>} />
+            <Route path="/new" element={<ProtectedRoute><SessionForm /></ProtectedRoute>} />
+            <Route path="/session/:id" element={<ProtectedRoute><SessionDetail /></ProtectedRoute>} />
+            <Route path="/session/:id/edit" element={<ProtectedRoute><SessionForm /></ProtectedRoute>} />
+            <Route path="/records" element={<ProtectedRoute><Records /></ProtectedRoute>} />
           </Routes>
         </div>
       </main>
     </>
+  );
+}
+
+function App() {
+  return (
+    <AuthProvider>
+      <AppRoutes />
+    </AuthProvider>
   );
 }
 

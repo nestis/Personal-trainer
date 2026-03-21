@@ -3,9 +3,10 @@ import { listSessions } from './dynamodb';
 import { estimate1RM } from '../utils/formulas';
 
 export async function getAllRecords(
+  userId: string,
   prefetchedSessions?: Session[]
 ): Promise<{ strengthPRs: StrengthPR[]; wodRecords: WodRecord[] }> {
-  const sessions = prefetchedSessions ?? await listSessions();
+  const sessions = prefetchedSessions ?? await listSessions(userId);
   const completedSessions = sessions.filter((s) => s.status === 'completed');
 
   const strengthPRs = computeStrengthPRs(completedSessions);
@@ -115,12 +116,12 @@ function computeWodRecords(completedSessions: Session[]): WodRecord[] {
   return records;
 }
 
-export async function getStrengthPRs(prefetchedSessions?: Session[]): Promise<StrengthPR[]> {
-  const { strengthPRs } = await getAllRecords(prefetchedSessions);
+export async function getStrengthPRs(userId: string, prefetchedSessions?: Session[]): Promise<StrengthPR[]> {
+  const { strengthPRs } = await getAllRecords(userId, prefetchedSessions);
   return strengthPRs;
 }
 
-export async function getWodRecords(prefetchedSessions?: Session[]): Promise<WodRecord[]> {
-  const { wodRecords } = await getAllRecords(prefetchedSessions);
+export async function getWodRecords(userId: string, prefetchedSessions?: Session[]): Promise<WodRecord[]> {
+  const { wodRecords } = await getAllRecords(userId, prefetchedSessions);
   return wodRecords;
 }
