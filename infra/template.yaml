@@ -7,6 +7,11 @@ Parameters:
     Type: String
     NoEcho: true
     Description: Password for accessing the application
+  JwtSecret:
+    Type: String
+    NoEcho: true
+    Default: 'unused'
+    Description: Deprecated - kept for backward compatibility during stack transition
   Environment:
     Type: String
     Default: prod
@@ -98,6 +103,41 @@ Resources:
               KeyType: HASH
             - AttributeName: date
               KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
+      SSESpecification:
+        SSEEnabled: true
+      Tags:
+        - Key: Project
+          Value: workout-tracker
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: ManagedBy
+          Value: SAM
+
+  # DynamoDB Table for Users (retained for backward compatibility, no longer used by app)
+  UsersTable:
+    Type: AWS::DynamoDB::Table
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      TableName: !Sub 'Users-${Environment}'
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: id
+          AttributeType: S
+        - AttributeName: email
+          AttributeType: S
+      KeySchema:
+        - AttributeName: id
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: email-index
+          KeySchema:
+            - AttributeName: email
+              KeyType: HASH
           Projection:
             ProjectionType: ALL
       PointInTimeRecoverySpecification:
