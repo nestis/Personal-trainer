@@ -23,6 +23,7 @@ Globals:
         RECORDS_TABLE: !Ref ManualRecordsTable
         USERS_TABLE: !Ref UsersTable
         JWT_SECRET: !Ref JwtSecret
+        FRONTEND_URL: !Sub 'https://${FrontendDistribution.DomainName}'
     Tags:
       Project: workout-tracker
       Environment: !Ref Environment

@@ -1,9 +1,20 @@
 import { Router, Request, Response } from 'express';
+import rateLimit from 'express-rate-limit';
 import { createUser, getUserByEmail, verifyPassword, getUserById } from '../services/users';
 import { generateToken } from '../services/auth';
 import { jwtAuth } from '../middleware/auth';
 
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  message: { error: 'Too many attempts, please try again later' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 const router = Router();
+
+router.use(authLimiter);
 
 router.post('/register', async (req: Request, res: Response) => {
   try {
@@ -32,7 +43,7 @@ router.post('/register', async (req: Request, res: Response) => {
     });
   } catch (error) {
     if (error instanceof Error && error.message === 'EMAIL_EXISTS') {
-      res.status(409).json({ error: 'An account with this email already exists' });
+      res.status(409).json({ error: 'Registration failed. Please try a different email or log in.' });
       return;
     }
     console.error('Error registering user:', error);

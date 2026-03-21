@@ -1,5 +1,6 @@
 import express from 'express';
 import cors from 'cors';
+import helmet from 'helmet';
 import { jwtAuth } from './middleware/auth';
 import sessionsRouter from './routes/sessions';
 import recordsRouter from './routes/records';
@@ -8,7 +9,12 @@ import authRouter from './routes/auth';
 
 const app = express();
 
-app.use(cors({ origin: true }));
+app.use(helmet());
+app.use(cors({
+  origin: process.env.FRONTEND_URL || true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Authorization', 'Content-Type'],
+}));
 app.use(express.json({ limit: '100kb' }));
 
 // Health check (no auth)
