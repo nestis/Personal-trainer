@@ -1,27 +1,27 @@
-import { Session, StrengthPR, WodRecord, ManualRecord, ManualStrengthPR, ManualWodRecord, AuthUser, AuthResponse } from '../types';
+import { Session, StrengthPR, WodRecord, ManualRecord, ManualStrengthPR, ManualWodRecord } from '../types';
 
 const API_BASE = import.meta.env.VITE_API_URL || '/api';
 
-function getToken(): string | null {
-  return localStorage.getItem('auth_token');
+function getPassword(): string | null {
+  return localStorage.getItem('app_password');
 }
 
-function setToken(token: string): void {
-  localStorage.setItem('auth_token', token);
+function setPassword(password: string): void {
+  localStorage.setItem('app_password', password);
 }
 
-function clearToken(): void {
-  localStorage.removeItem('auth_token');
+function clearPassword(): void {
+  localStorage.removeItem('app_password');
 }
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
-  const token = getToken();
+  const password = getPassword();
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
     ...options.headers as Record<string, string>,
   };
-  if (token) {
-    headers['Authorization'] = `Bearer ${token}`;
+  if (password) {
+    headers['Authorization'] = `Bearer ${password}`;
   }
 
   const res = await fetch(`${API_BASE}${path}`, {
@@ -30,9 +30,9 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   });
 
   if (res.status === 401) {
-    clearToken();
+    clearPassword();
     window.location.href = '/login';
-    throw new Error('Session expired');
+    throw new Error('Invalid password');
   }
 
   if (!res.ok) {
@@ -46,27 +46,19 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
 
 export const api = {
   // Auth
-  register(email: string, password: string, displayName: string): Promise<AuthResponse> {
-    return request('/auth/register', {
-      method: 'POST',
-      body: JSON.stringify({ email, password, displayName }),
-    });
+  async verifyPassword(password: string): Promise<void> {
+    setPassword(password);
+    try {
+      await request('/auth/verify', { method: 'POST' });
+    } catch {
+      clearPassword();
+      throw new Error('Invalid password');
+    }
   },
 
-  login(email: string, password: string): Promise<AuthResponse> {
-    return request('/auth/login', {
-      method: 'POST',
-      body: JSON.stringify({ email, password }),
-    });
-  },
-
-  getMe(): Promise<AuthUser> {
-    return request('/auth/me');
-  },
-
-  setToken,
-  clearToken,
-  getToken,
+  setPassword,
+  clearPassword,
+  getPassword,
 
   // Sessions
   listSessions(startDate?: string, endDate?: string): Promise<Session[]> {

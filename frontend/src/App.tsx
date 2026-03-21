@@ -4,41 +4,39 @@ import SessionForm from './pages/SessionForm';
 import SessionDetail from './pages/SessionDetail';
 import Records from './pages/Records';
 import Login from './pages/Login';
-import Register from './pages/Register';
 import Header from './components/Header';
 import Spinner from './components/Spinner';
 import { AuthProvider, useAuth } from './hooks/useAuth';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { user, loading } = useAuth();
+  const { authenticated, loading } = useAuth();
 
   if (loading) return <Spinner />;
-  if (!user) return <Navigate to="/login" replace />;
+  if (!authenticated) return <Navigate to="/login" replace />;
 
   return <>{children}</>;
 }
 
 function PublicOnlyRoute({ children }: { children: React.ReactNode }) {
-  const { user, loading } = useAuth();
+  const { authenticated, loading } = useAuth();
 
   if (loading) return <Spinner />;
-  if (user) return <Navigate to="/" replace />;
+  if (authenticated) return <Navigate to="/" replace />;
 
   return <>{children}</>;
 }
 
 function AppRoutes() {
   const location = useLocation();
-  const { user } = useAuth();
+  const { authenticated } = useAuth();
 
   return (
     <>
-      {user && <Header />}
+      {authenticated && <Header />}
       <main className="container" style={{ paddingBottom: '24px', flex: 1 }}>
         <div key={location.pathname} className="fade-in">
           <Routes location={location}>
             <Route path="/login" element={<PublicOnlyRoute><Login /></PublicOnlyRoute>} />
-            <Route path="/register" element={<PublicOnlyRoute><Register /></PublicOnlyRoute>} />
             <Route path="/" element={<ProtectedRoute><SessionList /></ProtectedRoute>} />
             <Route path="/new" element={<ProtectedRoute><SessionForm /></ProtectedRoute>} />
             <Route path="/session/:id" element={<ProtectedRoute><SessionDetail /></ProtectedRoute>} />

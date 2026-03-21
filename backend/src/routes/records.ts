@@ -6,7 +6,7 @@ const router = Router();
 // Get all strength personal records
 router.get('/strength', async (req: Request, res: Response) => {
   try {
-    const userId = req.user!.userId;
+    const userId = req.userId!;
     const prs = await getStrengthPRs(userId);
     res.json(prs);
   } catch (error) {
@@ -18,7 +18,7 @@ router.get('/strength', async (req: Request, res: Response) => {
 // Get all WOD time records
 router.get('/wods', async (req: Request, res: Response) => {
   try {
-    const userId = req.user!.userId;
+    const userId = req.userId!;
     const records = await getWodRecords(userId);
     res.json(records);
   } catch (error) {

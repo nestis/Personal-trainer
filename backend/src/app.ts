@@ -1,11 +1,10 @@
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
-import { jwtAuth } from './middleware/auth';
+import { passwordAuth } from './middleware/auth';
 import sessionsRouter from './routes/sessions';
 import recordsRouter from './routes/records';
 import manualRecordsRouter from './routes/manualRecords';
-import authRouter from './routes/auth';
 
 const app = express();
 
@@ -22,12 +21,14 @@ app.get('/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-// Auth routes (no auth required)
-app.use('/api/auth', authRouter);
+// Password verification endpoint
+app.post('/api/auth/verify', passwordAuth, (_req, res) => {
+  res.json({ ok: true });
+});
 
-// All data routes require JWT
-app.use('/api/sessions', jwtAuth, sessionsRouter);
-app.use('/api/records', jwtAuth, recordsRouter);
-app.use('/api/manual-records', jwtAuth, manualRecordsRouter);
+// All data routes require password
+app.use('/api/sessions', passwordAuth, sessionsRouter);
+app.use('/api/records', passwordAuth, recordsRouter);
+app.use('/api/manual-records', passwordAuth, manualRecordsRouter);
 
 export default app;

@@ -1,5 +1,5 @@
 import { useState, FormEvent } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 
 const s: Record<string, React.CSSProperties> = {
@@ -33,18 +33,11 @@ const s: Record<string, React.CSSProperties> = {
     background: 'rgba(255, 69, 58, 0.12)',
     borderRadius: 'var(--radius-xs)',
   },
-  footer: {
-    textAlign: 'center' as const,
-    marginTop: 24,
-    fontSize: 15,
-    color: 'var(--text-secondary)',
-  },
 };
 
 function Login() {
   const { login } = useAuth();
   const navigate = useNavigate();
-  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -54,10 +47,10 @@ function Login() {
     setError('');
     setLoading(true);
     try {
-      await login(email, password);
+      await login(password);
       navigate('/');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Login failed');
+      setError(err instanceof Error ? err.message : 'Invalid password');
     } finally {
       setLoading(false);
     }
@@ -65,24 +58,11 @@ function Login() {
 
   return (
     <div style={s.page} className="fade-in">
-      <div style={s.title}>Welcome Back</div>
-      <div style={s.subtitle}>Sign in to your workout tracker</div>
+      <div style={s.title}>Workout Tracker</div>
+      <div style={s.subtitle}>Enter your password to continue</div>
 
       <form style={s.form} onSubmit={handleSubmit}>
         {error && <div style={s.error}>{error}</div>}
-
-        <div>
-          <label className="label">Email</label>
-          <input
-            className="input"
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="you@example.com"
-            autoComplete="email"
-            required
-          />
-        </div>
 
         <div>
           <label className="label">Password</label>
@@ -93,6 +73,7 @@ function Login() {
             onChange={(e) => setPassword(e.target.value)}
             placeholder="Your password"
             autoComplete="current-password"
+            autoFocus
             required
           />
         </div>
@@ -100,16 +81,12 @@ function Login() {
         <button
           className="btn btn-primary btn-block"
           type="submit"
-          disabled={loading || !email || !password}
+          disabled={loading || !password}
           style={{ marginTop: 8 }}
         >
-          {loading ? 'Signing in...' : 'Sign In'}
+          {loading ? 'Unlocking...' : 'Unlock'}
         </button>
       </form>
-
-      <div style={s.footer}>
-        Don't have an account? <Link to="/register">Create one</Link>
-      </div>
     </div>
   );
 }

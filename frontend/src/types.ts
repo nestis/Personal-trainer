@@ -86,14 +86,3 @@ export interface ManualWodRecord {
 
 export type ManualRecord = ManualStrengthPR | ManualWodRecord;
 
-// Auth types
-export interface AuthUser {
-  id: string;
-  email: string;
-  displayName: string;
-}
-
-export interface AuthResponse {
-  token: string;
-  user: AuthUser;
-}

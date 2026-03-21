@@ -166,7 +166,7 @@ jobs:
           sam deploy \
             --stack-name "${{ env.STACK_NAME }}" \
             --parameter-overrides \
-              "JwtSecret=${{ secrets.JWT_SECRET }}" \
+              "AppPassword=${{ secrets.APP_PASSWORD }}" \
               "Environment=${{ env.ENVIRONMENT }}" \
             --capabilities CAPABILITY_IAM \
             --region "${{ env.AWS_REGION }}" \

@@ -11,7 +11,7 @@ const router = Router();
 // List manual records (optional ?type=strength|wod)
 router.get('/', async (req: Request, res: Response) => {
   try {
-    const userId = req.user!.userId;
+    const userId = req.userId!;
     const type = req.query.type as string | undefined;
     if (type !== undefined && type !== 'strength' && type !== 'wod') {
       res.status(400).json({ error: 'type must be "strength" or "wod"' });
@@ -28,7 +28,7 @@ router.get('/', async (req: Request, res: Response) => {
 // Create a manual strength PR
 router.post('/strength', async (req: Request, res: Response) => {
   try {
-    const userId = req.user!.userId;
+    const userId = req.userId!;
     const { exercise, reps, kilos, date, notes } = req.body;
     if (!exercise || !date) {
       res.status(400).json({ error: 'exercise, reps, kilos, and date are required' });
@@ -53,7 +53,7 @@ router.post('/strength', async (req: Request, res: Response) => {
 // Create a manual WOD record
 router.post('/wod', async (req: Request, res: Response) => {
   try {
-    const userId = req.user!.userId;
+    const userId = req.userId!;
     const { name, description, timeSeconds, totalReps, avgHeartRate, maxHeartRate, date, notes } = req.body;
     if (!name || !date) {
       res.status(400).json({ error: 'name, timeSeconds, and date are required' });
@@ -76,7 +76,7 @@ router.post('/wod', async (req: Request, res: Response) => {
 // Delete a manual record
 router.delete('/:id', async (req: Request, res: Response) => {
   try {
-    const userId = req.user!.userId;
+    const userId = req.userId!;
     const deleted = await deleteManualRecord(userId, req.params.id);
     if (!deleted) {
       res.status(404).json({ error: 'Record not found' });

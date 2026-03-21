@@ -3,10 +3,10 @@ Transform: AWS::Serverless-2016-10-31
 Description: "Personal Trainer - Full-stack serverless workout tracking (API, database, frontend hosting)"
 
 Parameters:
-  JwtSecret:
+  AppPassword:
     Type: String
     NoEcho: true
-    Description: Secret key for signing JWT tokens
+    Description: Password for accessing the application
   Environment:
     Type: String
     Default: prod
@@ -21,8 +21,7 @@ Globals:
       Variables:
         SESSIONS_TABLE: !Ref SessionsTable
         RECORDS_TABLE: !Ref ManualRecordsTable
-        USERS_TABLE: !Ref UsersTable
-        JWT_SECRET: !Ref JwtSecret
+        APP_PASSWORD: !Ref AppPassword
         FRONTEND_URL: !Sub 'https://${FrontendDistribution.DomainName}'
     Tags:
       Project: workout-tracker
@@ -36,41 +35,6 @@ Globals:
         ThrottlingRateLimit: 5
 
 Resources:
-  # DynamoDB Table for Users
-  UsersTable:
-    Type: AWS::DynamoDB::Table
-    DeletionPolicy: Retain
-    UpdateReplacePolicy: Retain
-    Properties:
-      TableName: !Sub 'Users-${Environment}'
-      BillingMode: PAY_PER_REQUEST
-      AttributeDefinitions:
-        - AttributeName: id
-          AttributeType: S
-        - AttributeName: email
-          AttributeType: S
-      KeySchema:
-        - AttributeName: id
-          KeyType: HASH
-      GlobalSecondaryIndexes:
-        - IndexName: email-index
-          KeySchema:
-            - AttributeName: email
-              KeyType: HASH
-          Projection:
-            ProjectionType: ALL
-      PointInTimeRecoverySpecification:
-        PointInTimeRecoveryEnabled: true
-      SSESpecification:
-        SSEEnabled: true
-      Tags:
-        - Key: Project
-          Value: workout-tracker
-        - Key: Environment
-          Value: !Ref Environment
-        - Key: ManagedBy
-          Value: SAM
-
   # DynamoDB Table for Workout Sessions
   SessionsTable:
     Type: AWS::DynamoDB::Table
@@ -161,8 +125,6 @@ Resources:
             TableName: !Ref SessionsTable
         - DynamoDBCrudPolicy:
             TableName: !Ref ManualRecordsTable
-        - DynamoDBCrudPolicy:
-            TableName: !Ref UsersTable
       Events:
         HealthCheck:
           Type: Api
@@ -277,9 +239,6 @@ Outputs:
   ManualRecordsTableName:
     Description: DynamoDB manual records table name
     Value: !Ref ManualRecordsTable
-  UsersTableName:
-    Description: DynamoDB users table name
-    Value: !Ref UsersTable
   CloudFrontDistributionId:
     Description: CloudFront distribution ID for cache invalidation
     Value: !Ref FrontendDistribution

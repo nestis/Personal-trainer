@@ -12,7 +12,7 @@ const router = Router();
 // List sessions with optional date filtering
 router.get('/', async (req: Request, res: Response) => {
   try {
-    const userId = req.user!.userId;
+    const userId = req.userId!;
     const { startDate, endDate } = req.query;
     const sessions = await listSessions(
       userId,
@@ -29,7 +29,7 @@ router.get('/', async (req: Request, res: Response) => {
 // Get a single session
 router.get('/:id', async (req: Request, res: Response) => {
   try {
-    const userId = req.user!.userId;
+    const userId = req.userId!;
     const session = await getSession(userId, req.params.id);
     if (!session) {
       res.status(404).json({ error: 'Session not found' });
@@ -45,7 +45,7 @@ router.get('/:id', async (req: Request, res: Response) => {
 // Create a new session (planned)
 router.post('/', async (req: Request, res: Response) => {
   try {
-    const userId = req.user!.userId;
+    const userId = req.userId!;
     const { date, strength, wod } = req.body;
     if (!date || !strength || !wod) {
       res.status(400).json({ error: 'date, strength, and wod are required' });
@@ -62,7 +62,7 @@ router.post('/', async (req: Request, res: Response) => {
 // Update a session (modify plan or log actuals)
 router.put('/:id', async (req: Request, res: Response) => {
   try {
-    const userId = req.user!.userId;
+    const userId = req.userId!;
     const { date, status, strength, wod, notes } = req.body;
     const sanitizedInput = {
       ...(date !== undefined && { date }),
@@ -86,7 +86,7 @@ router.put('/:id', async (req: Request, res: Response) => {
 // Delete a session
 router.delete('/:id', async (req: Request, res: Response) => {
   try {
-    const userId = req.user!.userId;
+    const userId = req.userId!;
     const deleted = await deleteSession(userId, req.params.id);
     if (!deleted) {
       res.status(404).json({ error: 'Session not found' });
