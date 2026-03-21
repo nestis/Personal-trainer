@@ -157,6 +157,27 @@ jobs:
           name: backend-dist
           path: backend/dist/
 
+      - name: Clean up failed stack if needed
+        run: |
+          STACK_STATUS=$(aws cloudformation describe-stacks \
+            --stack-name "${{ env.STACK_NAME }}" \
+            --region "${{ env.AWS_REGION }}" \
+            --query 'Stacks[0].StackStatus' \
+            --output text 2>/dev/null || echo "DOES_NOT_EXIST")
+
+          echo "Stack status: $STACK_STATUS"
+
+          if [[ "$STACK_STATUS" == "ROLLBACK_COMPLETE" || "$STACK_STATUS" == "ROLLBACK_FAILED" ]]; then
+            echo "Stack is in $STACK_STATUS state, deleting before redeploy..."
+            aws cloudformation delete-stack \
+              --stack-name "${{ env.STACK_NAME }}" \
+              --region "${{ env.AWS_REGION }}"
+            aws cloudformation wait stack-delete-complete \
+              --stack-name "${{ env.STACK_NAME }}" \
+              --region "${{ env.AWS_REGION }}"
+            echo "Stack deleted successfully"
+          fi
+
       - name: SAM Build
         run: sam build
         working-directory: infra
