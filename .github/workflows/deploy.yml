@@ -148,7 +148,7 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
 
-      - uses: aws-actions/setup-sam@819221da6eef60886575f16eee1526142f498037 # v2.1.0
+      - uses: aws-actions/setup-sam@d78e1a4a9656d3b223e59b80676a797f20093133 # v2
         with:
           use-installer: true
 
