@@ -1,6 +1,7 @@
 import {
   PutCommand,
   GetCommand,
+  UpdateCommand,
   DeleteCommand,
   QueryCommand,
 } from '@aws-sdk/lib-dynamodb';
@@ -43,7 +44,7 @@ export async function createManualStrengthPR(userId: string, input: {
 export async function createManualWodRecord(userId: string, input: {
   name: string;
   description?: string;
-  timeSeconds: number;
+  timeSeconds?: number;
   totalReps?: number;
   avgHeartRate?: number;
   maxHeartRate?: number;
@@ -57,7 +58,7 @@ export async function createManualWodRecord(userId: string, input: {
     type: 'wod',
     name: input.name,
     ...(input.description !== undefined && { description: input.description }),
-    timeSeconds: input.timeSeconds,
+    ...(input.timeSeconds !== undefined && { timeSeconds: input.timeSeconds }),
     ...(input.totalReps !== undefined && { totalReps: input.totalReps }),
     ...(input.avgHeartRate !== undefined && { avgHeartRate: input.avgHeartRate }),
     ...(input.maxHeartRate !== undefined && { maxHeartRate: input.maxHeartRate }),
@@ -72,6 +73,66 @@ export async function createManualWodRecord(userId: string, input: {
   );
 
   return record;
+}
+
+export async function updateManualWodRecord(userId: string, id: string, input: {
+  name?: string;
+  description?: string;
+  timeSeconds?: number;
+  totalReps?: number;
+  avgHeartRate?: number;
+  maxHeartRate?: number;
+  date?: string;
+  notes?: string;
+}): Promise<ManualWodRecord | null> {
+  const existing = await getManualRecord(userId, id);
+  if (!existing || existing.type !== 'wod') return null;
+
+  const now = new Date().toISOString();
+  const updates: Record<string, unknown> = { updatedAt: now };
+
+  if (input.name !== undefined) updates.name = input.name;
+  if (input.description !== undefined) updates.description = input.description;
+  if (input.date !== undefined) updates.date = input.date;
+  if (input.notes !== undefined) updates.notes = input.notes;
+  if (input.timeSeconds !== undefined) updates.timeSeconds = input.timeSeconds;
+  if (input.totalReps !== undefined) updates.totalReps = input.totalReps;
+  if (input.avgHeartRate !== undefined) updates.avgHeartRate = input.avgHeartRate;
+  if (input.maxHeartRate !== undefined) updates.maxHeartRate = input.maxHeartRate;
+
+  const setParts: string[] = [];
+  const removeParts: string[] = [];
+  const names: Record<string, string> = {};
+  const values: Record<string, unknown> = {};
+
+  for (const [key, val] of Object.entries(updates)) {
+    const attrName = `#${key}`;
+    names[attrName] = key;
+    if (val === null || val === '') {
+      removeParts.push(attrName);
+    } else {
+      const attrVal = `:${key}`;
+      setParts.push(`${attrName} = ${attrVal}`);
+      values[attrVal] = val;
+    }
+  }
+
+  let updateExpr = '';
+  if (setParts.length > 0) updateExpr += `SET ${setParts.join(', ')}`;
+  if (removeParts.length > 0) updateExpr += ` REMOVE ${removeParts.join(', ')}`;
+
+  const result = await docClient.send(
+    new UpdateCommand({
+      TableName: TABLE_NAME,
+      Key: { id },
+      UpdateExpression: updateExpr,
+      ExpressionAttributeNames: names,
+      ExpressionAttributeValues: Object.keys(values).length > 0 ? values : undefined,
+      ReturnValues: 'ALL_NEW',
+    })
+  );
+
+  return result.Attributes as ManualWodRecord;
 }
 
 export async function getManualRecord(userId: string, id: string): Promise<ManualRecord | null> {

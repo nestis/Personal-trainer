@@ -271,6 +271,7 @@ function Records() {
   const [error, setError] = useState<string | null>(null);
   const [showStrengthForm, setShowStrengthForm] = useState(false);
   const [showWodForm, setShowWodForm] = useState(false);
+  const [editingWodId, setEditingWodId] = useState<string | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [confirmDeleteName, setConfirmDeleteName] = useState('');
 
@@ -327,25 +328,48 @@ function Records() {
   };
 
   const handleAddWodRecord = async () => {
-    if (!wodForm.name || !wodForm.time) return;
+    if (!wodForm.name || (!wodForm.time && !wodForm.reps)) return;
     setWSaving(true);
     try {
-      await api.createManualWodRecord({
+      const data = {
         name: wodForm.name, description: wodForm.desc || undefined,
-        timeSeconds: parseTime(wodForm.time),
+        timeSeconds: wodForm.time ? parseTime(wodForm.time) : undefined,
         totalReps: wodForm.reps ? parseInt(wodForm.reps) : undefined,
         avgHeartRate: wodForm.avgHR ? parseInt(wodForm.avgHR) : undefined,
         maxHeartRate: wodForm.maxHR ? parseInt(wodForm.maxHR) : undefined,
         date: wodForm.date, notes: wodForm.notes || undefined,
-      });
+      };
+
+      if (editingWodId) {
+        await api.updateManualWodRecord(editingWodId, data);
+        setEditingWodId(null);
+        showToast('WOD record updated!');
+      } else {
+        await api.createManualWodRecord(data);
+        showToast('WOD record added!');
+      }
       setWodForm({ name: '', desc: '', time: '', reps: '', date: today, avgHR: '', maxHR: '', notes: '' });
       setShowWodForm(false);
-      showToast('WOD record added!');
       reloadManualRecords();
     } catch (err) {
-      console.error('Failed to add WOD record:', err);
-      showToast('Failed to add WOD record.', 'error');
+      console.error('Failed to save WOD record:', err);
+      showToast('Failed to save WOD record.', 'error');
     } finally { setWSaving(false); }
+  };
+
+  const startEditWod = (r: ManualWodRecord) => {
+    setWodForm({
+      name: r.name,
+      desc: r.description || '',
+      time: r.timeSeconds ? formatTime(r.timeSeconds) : '',
+      reps: r.totalReps ? String(r.totalReps) : '',
+      date: r.date,
+      avgHR: r.avgHeartRate ? String(r.avgHeartRate) : '',
+      maxHR: r.maxHeartRate ? String(r.maxHeartRate) : '',
+      notes: r.notes || '',
+    });
+    setEditingWodId(r.id);
+    setShowWodForm(true);
   };
 
   const handleDeleteManual = async (id: string) => {
@@ -542,14 +566,19 @@ function Records() {
                 <div style={s.wodHeader}>
                   <div>
                     <div style={s.wodName}>{r.name}</div>
-                    <div style={s.wodTime}>{formatTime(r.timeSeconds)}</div>
+                    <div style={s.wodTime}>
+                      {r.timeSeconds ? formatTime(r.timeSeconds) : `${r.totalReps} rounds`}
+                    </div>
                   </div>
-                  <button style={s.delBtn} onClick={() => askDeleteManual(r.id, r.name)} aria-label="Delete record">-</button>
+                  <div style={{ display: 'flex', gap: 12 }}>
+                    <button style={{ ...s.delBtn, color: 'var(--tint)' }} onClick={() => startEditWod(r)} aria-label="Edit record">&#9998;</button>
+                    <button style={s.delBtn} onClick={() => askDeleteManual(r.id, r.name)} aria-label="Delete record">-</button>
+                  </div>
                 </div>
                 {r.description && <div style={s.wodDesc}>{r.description}</div>}
                 <div style={s.wodMeta}>
                   <span>{formatDate(r.date)}</span>
-                  {r.totalReps && <span>{r.totalReps} reps</span>}
+                  {r.timeSeconds && r.totalReps ? <span>{r.totalReps} rounds</span> : null}
                   {r.avgHeartRate && <span>Avg {r.avgHeartRate} bpm</span>}
                   {r.maxHeartRate && <span>Max {r.maxHeartRate} bpm</span>}
                 </div>
@@ -562,7 +591,7 @@ function Records() {
 
           {showWodForm ? (
             <div className="card" style={s.formCard}>
-              <div style={s.formTitle}>New WOD Record</div>
+              <div style={s.formTitle}>{editingWodId ? 'Edit WOD Record' : 'New WOD Record'}</div>
               <div style={{ marginBottom: 10 }}>
                 <label className="label">WOD Name</label>
                 <input className="input" placeholder="e.g., Fran" value={wodForm.name} onChange={(e) => setWodForm({ ...wodForm, name: e.target.value })} />
@@ -577,7 +606,7 @@ function Records() {
                   <input className="input input-sm" placeholder="3:30" value={wodForm.time} onChange={(e) => setWodForm({ ...wodForm, time: e.target.value })} />
                 </div>
                 <div style={s.formField}>
-                  <label className="label">Reps</label>
+                  <label className="label">Rounds</label>
                   <input className="input input-sm" type="number" inputMode="numeric" placeholder="0" value={wodForm.reps} onChange={(e) => setWodForm({ ...wodForm, reps: e.target.value })} />
                 </div>
                 <div style={s.formField}>
@@ -600,9 +629,9 @@ function Records() {
                 <input className="input input-sm" placeholder="Optional" value={wodForm.notes} onChange={(e) => setWodForm({ ...wodForm, notes: e.target.value })} />
               </div>
               <div style={s.formActions}>
-                <button className="btn btn-secondary btn-sm" onClick={() => setShowWodForm(false)} style={{ flex: 1 }}>Cancel</button>
-                <button className="btn btn-primary btn-sm" onClick={handleAddWodRecord} disabled={wSaving || !wodForm.name || !wodForm.time} style={{ flex: 2 }}>
-                  {wSaving ? 'Saving...' : 'Save'}
+                <button className="btn btn-secondary btn-sm" onClick={() => { setShowWodForm(false); setEditingWodId(null); setWodForm({ name: '', desc: '', time: '', reps: '', date: today, avgHR: '', maxHR: '', notes: '' }); }} style={{ flex: 1 }}>Cancel</button>
+                <button className="btn btn-primary btn-sm" onClick={handleAddWodRecord} disabled={wSaving || !wodForm.name || (!wodForm.time && !wodForm.reps)} style={{ flex: 2 }}>
+                  {wSaving ? 'Saving...' : editingWodId ? 'Update' : 'Save'}
                 </button>
               </div>
             </div>

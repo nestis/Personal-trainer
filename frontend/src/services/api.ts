@@ -121,7 +121,7 @@ export const api = {
   createManualWodRecord(data: {
     name: string;
     description?: string;
-    timeSeconds: number;
+    timeSeconds?: number;
     totalReps?: number;
     avgHeartRate?: number;
     maxHeartRate?: number;
@@ -130,6 +130,22 @@ export const api = {
   }): Promise<ManualWodRecord> {
     return request('/manual-records/wod', {
       method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  updateManualWodRecord(id: string, data: {
+    name?: string;
+    description?: string;
+    timeSeconds?: number;
+    totalReps?: number;
+    avgHeartRate?: number;
+    maxHeartRate?: number;
+    date?: string;
+    notes?: string;
+  }): Promise<ManualWodRecord> {
+    return request(`/manual-records/wod/${id}`, {
+      method: 'PUT',
       body: JSON.stringify(data),
     });
   },

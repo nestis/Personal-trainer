@@ -90,7 +90,7 @@ export interface ManualWodRecord {
   type: 'wod';
   name: string;
   description?: string;
-  timeSeconds: number;
+  timeSeconds?: number;
   totalReps?: number;
   avgHeartRate?: number;
   maxHeartRate?: number;

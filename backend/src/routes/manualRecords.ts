@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import {
   createManualStrengthPR,
   createManualWodRecord,
+  updateManualWodRecord,
   deleteManualRecord,
   listManualRecords,
 } from '../services/manualRecords';
@@ -56,11 +57,15 @@ router.post('/wod', async (req: Request, res: Response) => {
     const userId = req.userId!;
     const { name, description, timeSeconds, totalReps, avgHeartRate, maxHeartRate, date, notes } = req.body;
     if (!name || !date) {
-      res.status(400).json({ error: 'name, timeSeconds, and date are required' });
+      res.status(400).json({ error: 'name and date are required' });
       return;
     }
-    if (typeof timeSeconds !== 'number' || timeSeconds <= 0) {
+    if (timeSeconds !== undefined && (typeof timeSeconds !== 'number' || timeSeconds <= 0)) {
       res.status(400).json({ error: 'timeSeconds must be a positive number' });
+      return;
+    }
+    if (!timeSeconds && !totalReps) {
+      res.status(400).json({ error: 'Either timeSeconds or totalReps (rounds) is required' });
       return;
     }
     const record = await createManualWodRecord(userId, {
@@ -70,6 +75,29 @@ router.post('/wod', async (req: Request, res: Response) => {
   } catch (error) {
     console.error('Error creating manual WOD record:', error);
     res.status(500).json({ error: 'Failed to create WOD record' });
+  }
+});
+
+// Update a manual WOD record
+router.put('/wod/:id', async (req: Request, res: Response) => {
+  try {
+    const userId = req.userId!;
+    const { name, description, timeSeconds, totalReps, avgHeartRate, maxHeartRate, date, notes } = req.body;
+    if (timeSeconds !== undefined && (typeof timeSeconds !== 'number' || timeSeconds <= 0)) {
+      res.status(400).json({ error: 'timeSeconds must be a positive number' });
+      return;
+    }
+    const updated = await updateManualWodRecord(userId, req.params.id, {
+      name, description, timeSeconds, totalReps, avgHeartRate, maxHeartRate, date, notes,
+    });
+    if (!updated) {
+      res.status(404).json({ error: 'Record not found' });
+      return;
+    }
+    res.json(updated);
+  } catch (error) {
+    console.error('Error updating manual WOD record:', error);
+    res.status(500).json({ error: 'Failed to update WOD record' });
   }
 });
 
