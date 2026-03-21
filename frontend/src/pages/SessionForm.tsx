@@ -4,6 +4,9 @@ import { Exercise, WOD, Session } from '../types';
 import { api } from '../services/api';
 import ExerciseEditor from '../components/ExerciseEditor';
 import WodEditor from '../components/WodEditor';
+import Spinner from '../components/Spinner';
+import Toast from '../components/Toast';
+import { useToast } from '../hooks/useToast';
 
 const s: Record<string, React.CSSProperties> = {
   page: {
@@ -35,12 +38,6 @@ const s: Record<string, React.CSSProperties> = {
     gap: 10,
     marginTop: 32,
   },
-  loading: {
-    textAlign: 'center' as const,
-    padding: 60,
-    color: 'var(--text-secondary)',
-    fontSize: 15,
-  },
 };
 
 function SessionForm() {
@@ -61,6 +58,7 @@ function SessionForm() {
   const [notes, setNotes] = useState('');
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(isEdit);
+  const { toast, showToast, dismissToast } = useToast();
 
   useEffect(() => {
     if (id) {
@@ -92,14 +90,14 @@ function SessionForm() {
       navigate('/');
     } catch (err) {
       console.error('Failed to save session:', err);
-      alert('Failed to save session.');
+      showToast('Failed to save session.', 'error');
     } finally {
       setSaving(false);
     }
   };
 
   if (loading) {
-    return <div style={s.loading}>Loading...</div>;
+    return <Spinner />;
   }
 
   return (
@@ -169,6 +167,8 @@ function SessionForm() {
           {saving ? 'Saving...' : isEdit ? 'Update' : 'Plan Session'}
         </button>
       </div>
+
+      <Toast toast={toast} onDismiss={dismissToast} />
     </div>
   );
 }

@@ -10,7 +10,7 @@ interface Props {
 const s: Record<string, React.CSSProperties> = {
   grid: {
     display: 'grid',
-    gridTemplateColumns: '1fr 1fr',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))',
     gap: 10,
     marginTop: 14,
   },

@@ -1,10 +1,14 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { Session } from '../types';
 import { api } from '../services/api';
 import ExerciseEditor from '../components/ExerciseEditor';
 import WodEditor from '../components/WodEditor';
 import { formatDate } from '../utils/format';
+import Spinner from '../components/Spinner';
+import Toast from '../components/Toast';
+import ConfirmDialog from '../components/ConfirmDialog';
+import { useToast } from '../hooks/useToast';
 
 const s: Record<string, React.CSSProperties> = {
   page: {
@@ -51,12 +55,6 @@ const s: Record<string, React.CSSProperties> = {
     gap: 10,
     marginTop: 32,
   },
-  loading: {
-    textAlign: 'center' as const,
-    padding: 60,
-    color: 'var(--text-secondary)',
-    fontSize: 15,
-  },
 };
 
 const noop = () => {};
@@ -69,13 +67,13 @@ function SessionDetail() {
   const [error, setError] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const { toast, showToast, dismissToast } = useToast();
 
   useEffect(() => {
     document.title = 'Session Details - Workout Tracker';
   }, []);
 
-  const loadSession = () => {
+  const loadSession = useCallback(() => {
     if (!id) return;
     setError(null);
     setLoading(true);
@@ -91,22 +89,20 @@ function SessionDetail() {
         }
       })
       .finally(() => setLoading(false));
-  };
+  }, [id, navigate]);
 
   useEffect(() => {
     loadSession();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id]);
+  }, [loadSession]);
 
   const handleDelete = async () => {
     if (!id) return;
-    setDeleteError(null);
     try {
       await api.deleteSession(id);
       navigate('/');
     } catch (err) {
       console.error('Failed to delete session:', err);
-      setDeleteError('Failed to delete session. Please try again.');
+      showToast('Failed to delete session.', 'error');
       setConfirmDelete(false);
     }
   };
@@ -117,15 +113,17 @@ function SessionDetail() {
     try {
       const updated = await api.updateSession(id, { status: 'completed' });
       setSession(updated);
+      showToast('Session marked as completed!');
     } catch (err) {
       console.error('Failed to update session:', err);
+      showToast('Failed to update session.', 'error');
     } finally {
       setSaving(false);
     }
   };
 
   if (loading) {
-    return <div style={s.loading}>Loading...</div>;
+    return <Spinner />;
   }
 
   if (error) {
@@ -153,7 +151,7 @@ function SessionDetail() {
       </div>
 
       <div style={s.section}>
-        <div style={s.sectionTitle}>Strength</div>
+        <div style={s.sectionTitle}>Strength ({session.strength.length})</div>
         <ExerciseEditor exercises={session.strength} onChange={noop} readOnly />
       </div>
 
@@ -166,12 +164,6 @@ function SessionDetail() {
         <div style={s.section}>
           <div style={s.sectionTitle}>Notes</div>
           <div style={s.notes}>{session.notes}</div>
-        </div>
-      )}
-
-      {deleteError && (
-        <div className="card" style={{ background: 'rgba(255,69,58,0.12)', color: 'var(--red)', marginBottom: 12 }}>
-          {deleteError}
         </div>
       )}
 
@@ -193,33 +185,25 @@ function SessionDetail() {
         >
           Edit
         </Link>
-        {confirmDelete ? (
-          <>
-            <button
-              className="btn btn-danger"
-              onClick={handleDelete}
-              style={{ flex: 1 }}
-            >
-              Delete
-            </button>
-            <button
-              className="btn btn-secondary"
-              onClick={() => setConfirmDelete(false)}
-              style={{ flex: 1 }}
-            >
-              Cancel
-            </button>
-          </>
-        ) : (
-          <button
-            className="btn btn-danger"
-            onClick={() => setConfirmDelete(true)}
-            style={{ flex: 1 }}
-          >
-            Delete
-          </button>
-        )}
+        <button
+          className="btn btn-danger"
+          onClick={() => setConfirmDelete(true)}
+          style={{ flex: 1 }}
+        >
+          Delete
+        </button>
       </div>
+
+      {confirmDelete && (
+        <ConfirmDialog
+          title="Delete Session"
+          message="This action cannot be undone. Are you sure you want to delete this session?"
+          onConfirm={handleDelete}
+          onCancel={() => setConfirmDelete(false)}
+        />
+      )}
+
+      <Toast toast={toast} onDismiss={dismissToast} />
     </div>
   );
 }

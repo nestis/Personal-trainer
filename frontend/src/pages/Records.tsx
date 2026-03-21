@@ -1,14 +1,17 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { StrengthPR, WodRecord, ManualStrengthPR, ManualWodRecord, ManualRecord } from '../types';
 import { api } from '../services/api';
 import { formatTime, parseTime, formatDate } from '../utils/format';
+import Spinner from '../components/Spinner';
+import Toast from '../components/Toast';
+import ConfirmDialog from '../components/ConfirmDialog';
+import { useToast } from '../hooks/useToast';
 
 const s: Record<string, React.CSSProperties> = {
   page: {
     paddingTop: 20,
     paddingBottom: 40,
   },
-  /* Apple-style segmented control */
   segmented: {
     display: 'flex',
     gap: 0,
@@ -40,6 +43,7 @@ const s: Record<string, React.CSSProperties> = {
     cursor: 'pointer',
     borderRadius: 7,
     boxShadow: '0 1px 4px rgba(0,0,0,0.3)',
+    transition: 'all 0.2s ease',
   },
   sectionLabel: {
     fontSize: 13,
@@ -60,10 +64,14 @@ const s: Record<string, React.CSSProperties> = {
     marginBottom: 8,
     paddingLeft: 4,
   },
-  /* Grouped card */
   group: {
     marginBottom: 12,
     overflow: 'hidden',
+  },
+  manualGroup: {
+    marginBottom: 12,
+    overflow: 'hidden',
+    borderLeft: '3px solid var(--indigo)',
   },
   exerciseName: {
     fontSize: 17,
@@ -107,14 +115,12 @@ const s: Record<string, React.CSSProperties> = {
     textAlign: 'right' as const,
     fontVariantNumeric: 'tabular-nums',
   },
-  separator: {
-    height: '0.5px',
-    background: 'var(--separator)',
-    marginLeft: 52,
-  },
-  /* WOD cards */
   wodCard: {
     marginBottom: 12,
+  },
+  manualWodCard: {
+    marginBottom: 12,
+    borderLeft: '3px solid var(--indigo)',
   },
   wodName: {
     fontSize: 17,
@@ -164,7 +170,6 @@ const s: Record<string, React.CSSProperties> = {
     marginBottom: 8,
     lineHeight: 1.4,
   },
-  /* Forms */
   formCard: {
     marginBottom: 12,
   },
@@ -187,7 +192,6 @@ const s: Record<string, React.CSSProperties> = {
     gap: 8,
     marginTop: 16,
   },
-  /* Delete button */
   delBtn: {
     background: 'none',
     border: 'none',
@@ -223,12 +227,6 @@ const s: Record<string, React.CSSProperties> = {
     color: 'var(--text-tertiary)',
     fontStyle: 'italic',
     marginTop: 2,
-  },
-  loading: {
-    textAlign: 'center' as const,
-    padding: '60px 20px',
-    color: 'var(--text-secondary)',
-    fontSize: 15,
   },
 };
 
@@ -274,17 +272,19 @@ function Records() {
   const [showStrengthForm, setShowStrengthForm] = useState(false);
   const [showWodForm, setShowWodForm] = useState(false);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [confirmDeleteName, setConfirmDeleteName] = useState('');
 
   const [strengthForm, setStrengthForm] = useState<StrengthFormState>({ exercise: '', reps: '', kilos: '', date: today, notes: '' });
   const [wodForm, setWodForm] = useState<WodFormState>({ name: '', desc: '', time: '', reps: '', date: today, avgHR: '', maxHR: '', notes: '' });
   const [sSaving, setSSaving] = useState(false);
   const [wSaving, setWSaving] = useState(false);
+  const { toast, showToast, dismissToast } = useToast();
 
   useEffect(() => {
     document.title = 'Records - Workout Tracker';
   }, []);
 
-  const loadData = () => {
+  const loadData = useCallback(() => {
     setLoading(true);
     setError(null);
     Promise.all([api.getStrengthPRs(), api.getWodRecords(), api.listManualRecords()])
@@ -298,7 +298,7 @@ function Records() {
         setError(err.message || 'Failed to load records.');
       })
       .finally(() => setLoading(false));
-  };
+  }, []);
 
   const reloadManualRecords = () => {
     api.listManualRecords()
@@ -306,7 +306,7 @@ function Records() {
       .catch((err) => console.error('Failed to reload manual records:', err));
   };
 
-  useEffect(() => { loadData(); }, []);
+  useEffect(() => { loadData(); }, [loadData]);
 
   const handleAddStrengthPR = async () => {
     if (!strengthForm.exercise || !strengthForm.reps || !strengthForm.kilos) return;
@@ -318,9 +318,11 @@ function Records() {
       });
       setStrengthForm({ exercise: '', reps: '', kilos: '', date: today, notes: '' });
       setShowStrengthForm(false);
+      showToast('Strength PR added!');
       reloadManualRecords();
     } catch (err) {
       console.error('Failed to add strength PR:', err);
+      showToast('Failed to add strength PR.', 'error');
     } finally { setSSaving(false); }
   };
 
@@ -338,19 +340,34 @@ function Records() {
       });
       setWodForm({ name: '', desc: '', time: '', reps: '', date: today, avgHR: '', maxHR: '', notes: '' });
       setShowWodForm(false);
+      showToast('WOD record added!');
       reloadManualRecords();
     } catch (err) {
       console.error('Failed to add WOD record:', err);
+      showToast('Failed to add WOD record.', 'error');
     } finally { setWSaving(false); }
   };
 
   const handleDeleteManual = async (id: string) => {
-    try { await api.deleteManualRecord(id); setConfirmDeleteId(null); reloadManualRecords(); }
-    catch (err) { console.error('Failed to delete record:', err); }
+    try {
+      await api.deleteManualRecord(id);
+      setConfirmDeleteId(null);
+      showToast('Record deleted.');
+      reloadManualRecords();
+    } catch (err) {
+      console.error('Failed to delete record:', err);
+      showToast('Failed to delete record.', 'error');
+      setConfirmDeleteId(null);
+    }
+  };
+
+  const askDeleteManual = (id: string, name: string) => {
+    setConfirmDeleteId(id);
+    setConfirmDeleteName(name);
   };
 
   if (loading) {
-    return <div style={s.loading}>Loading...</div>;
+    return <Spinner />;
   }
 
   if (error) {
@@ -373,7 +390,6 @@ function Records() {
 
   return (
     <div style={s.page} className="fade-in">
-      {/* Segmented control */}
       <div style={s.segmented}>
         <button
           style={tab === 'strength' ? s.segActive : s.seg}
@@ -423,7 +439,7 @@ function Records() {
             Array.from(manualStrengthGrouped.entries()).map(([key, records]) => {
               const best1RM = Math.max(...records.map((r) => r.estimated1RM));
               return (
-                <div key={key} className="card" style={s.group}>
+                <div key={key} className="card" style={s.manualGroup}>
                   <div style={s.exerciseName}>{records[0].exercise}</div>
                   <div style={s.est1rm}>Est. 1RM: {best1RM} kg</div>
                   {records.map((r, i) => (
@@ -436,14 +452,7 @@ function Records() {
                           {r.notes && <div style={s.note}>{r.notes}</div>}
                         </span>
                         <span style={s.dateSmall}>{formatDate(r.date)}</span>
-                        {confirmDeleteId === r.id ? (
-                          <span style={{ display: 'flex', gap: 4 }}>
-                            <button style={s.delBtn} onClick={() => handleDeleteManual(r.id)} aria-label="Delete record">Yes</button>
-                            <button style={{ ...s.delBtn, color: 'var(--text-secondary)' }} onClick={() => setConfirmDeleteId(null)}>No</button>
-                          </span>
-                        ) : (
-                          <button style={s.delBtn} onClick={() => setConfirmDeleteId(r.id)} aria-label="Delete record">-</button>
-                        )}
+                        <button style={s.delBtn} onClick={() => askDeleteManual(r.id, r.exercise)} aria-label="Delete record">-</button>
                       </div>
                     </div>
                   ))}
@@ -529,20 +538,13 @@ function Records() {
 
           {manualWods.length > 0 ? (
             manualWods.map((r) => (
-              <div key={r.id} className="card" style={s.wodCard}>
+              <div key={r.id} className="card" style={s.manualWodCard}>
                 <div style={s.wodHeader}>
                   <div>
                     <div style={s.wodName}>{r.name}</div>
                     <div style={s.wodTime}>{formatTime(r.timeSeconds)}</div>
                   </div>
-                  {confirmDeleteId === r.id ? (
-                    <span style={{ display: 'flex', gap: 8 }}>
-                      <button style={s.delBtn} onClick={() => handleDeleteManual(r.id)} aria-label="Delete record">Delete</button>
-                      <button style={{ ...s.delBtn, color: 'var(--text-secondary)' }} onClick={() => setConfirmDeleteId(null)}>Cancel</button>
-                    </span>
-                  ) : (
-                    <button style={s.delBtn} onClick={() => setConfirmDeleteId(r.id)} aria-label="Delete record">-</button>
-                  )}
+                  <button style={s.delBtn} onClick={() => askDeleteManual(r.id, r.name)} aria-label="Delete record">-</button>
                 </div>
                 {r.description && <div style={s.wodDesc}>{r.description}</div>}
                 <div style={s.wodMeta}>
@@ -609,6 +611,17 @@ function Records() {
           )}
         </>
       )}
+
+      {confirmDeleteId && (
+        <ConfirmDialog
+          title="Delete Record"
+          message={`Delete "${confirmDeleteName}"? This action cannot be undone.`}
+          onConfirm={() => handleDeleteManual(confirmDeleteId)}
+          onCancel={() => setConfirmDeleteId(null)}
+        />
+      )}
+
+      <Toast toast={toast} onDismiss={dismissToast} />
     </div>
   );
 }

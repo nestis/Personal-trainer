@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { Session } from '../types';
 import { api } from '../services/api';
 import { formatDate } from '../utils/format';
+import Spinner from '../components/Spinner';
 
 const s: Record<string, React.CSSProperties> = {
   page: {
@@ -18,6 +19,7 @@ const s: Record<string, React.CSSProperties> = {
     background: 'var(--bg-grouped-secondary)',
     borderRadius: 'var(--radius)',
     overflow: 'hidden',
+    boxShadow: '0 1px 3px rgba(0,0,0,0.3), 0 4px 12px rgba(0,0,0,0.15)',
   },
   item: {
     padding: '14px 16px',
@@ -25,7 +27,6 @@ const s: Record<string, React.CSSProperties> = {
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: 12,
-    transition: 'background 0.15s',
   },
   itemContent: {
     flex: 1,
@@ -56,9 +57,9 @@ const s: Record<string, React.CSSProperties> = {
     textOverflow: 'ellipsis',
   },
   chevron: {
-    color: 'var(--text-tertiary)',
-    fontSize: 18,
+    color: 'var(--text-secondary)',
     flexShrink: 0,
+    opacity: 0.6,
   },
   separator: {
     height: '0.5px',
@@ -68,6 +69,11 @@ const s: Record<string, React.CSSProperties> = {
   empty: {
     textAlign: 'center' as const,
     padding: '80px 20px',
+  },
+  emptyIcon: {
+    fontSize: 48,
+    marginBottom: 16,
+    opacity: 0.6,
   },
   emptyTitle: {
     fontSize: 22,
@@ -80,13 +86,13 @@ const s: Record<string, React.CSSProperties> = {
     color: 'var(--text-secondary)',
     marginBottom: 28,
   },
-  loading: {
-    textAlign: 'center' as const,
-    padding: '80px 20px',
-    color: 'var(--text-secondary)',
-    fontSize: 15,
-  },
 };
+
+const ChevronIcon = () => (
+  <svg style={s.chevron} width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <polyline points="9 18 15 12 9 6" />
+  </svg>
+);
 
 function SessionList() {
   const [sessions, setSessions] = useState<Session[]>([]);
@@ -115,7 +121,7 @@ function SessionList() {
   }, []);
 
   if (loading) {
-    return <div style={s.loading}>Loading...</div>;
+    return <Spinner />;
   }
 
   if (error) {
@@ -134,9 +140,10 @@ function SessionList() {
   if (sessions.length === 0) {
     return (
       <div style={s.empty} className="fade-in">
+        <div style={s.emptyIcon}>&#x1F3CB;&#xFE0F;</div>
         <div style={s.emptyTitle}>No Sessions Yet</div>
         <div style={s.emptySubtitle}>Plan your first workout to get started.</div>
-        <Link to="/new" className="btn btn-primary">
+        <Link to="/new" className="btn btn-primary" style={{ animation: 'pulse 2s ease-in-out infinite' }}>
           New Session
         </Link>
       </div>
@@ -147,10 +154,10 @@ function SessionList() {
     <div style={s.page} className="fade-in">
       <div style={s.list}>
         {sessions.map((session, i) => (
-          <div key={session.id}>
+          <div key={session.id} className="fade-in-stagger" style={{ '--delay': `${i * 0.04}s` } as React.CSSProperties}>
             {i > 0 && <div style={s.separator} />}
             <Link to={`/session/${session.id}`} style={s.link}>
-              <div style={s.item}>
+              <div className="list-item" style={s.item}>
                 <div style={s.itemContent}>
                   <div style={s.dateRow}>
                     <span style={s.date}>{formatDate(session.date)}</span>
@@ -174,7 +181,7 @@ function SessionList() {
                     </div>
                   )}
                 </div>
-                <span style={s.chevron}>&#8250;</span>
+                <ChevronIcon />
               </div>
             </Link>
           </div>

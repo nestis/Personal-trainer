@@ -52,7 +52,9 @@ const s: Record<string, React.CSSProperties> = {
     gridTemplateColumns: '36px 1fr 1fr 36px',
     gap: 8,
     alignItems: 'center',
-    padding: '6px 2px',
+    padding: '6px 4px',
+    borderRadius: 'var(--radius-xs)',
+    transition: 'background 0.15s',
   },
   setNum: {
     fontSize: 15,
@@ -185,42 +187,59 @@ function ExerciseEditor({ exercises, onChange, readOnly }: Props) {
             </span>
           </div>
 
-          {exercise.sets.map((set, setIndex) => (
-            <div key={setIndex} style={s.setRow}>
-              <span style={s.setNum}>{set.setNumber}</span>
-              <input
-                className="input input-sm"
-                type="number"
-                inputMode="numeric"
-                value={set.reps || ''}
-                placeholder="0"
-                onChange={(e) =>
-                  updateSet(exIndex, setIndex, 'reps', parseInt(e.target.value) || 0)
-                }
-                readOnly={readOnly}
-              />
-              <input
-                className="input input-sm"
-                type="number"
-                inputMode="decimal"
-                value={set.kilos || ''}
-                placeholder="0"
-                onChange={(e) =>
-                  updateSet(exIndex, setIndex, 'kilos', parseFloat(e.target.value) || 0)
-                }
-                readOnly={readOnly}
-              />
-              <input
-                type="checkbox"
-                style={s.checkbox}
-                checked={set.completed}
-                onChange={(e) =>
-                  updateSet(exIndex, setIndex, 'completed', e.target.checked)
-                }
-                disabled={readOnly}
-              />
-            </div>
-          ))}
+          {exercise.sets.map((set, setIndex) => {
+            const isCompleted = set.completed;
+            const isEven = setIndex % 2 === 0;
+            return (
+              <div
+                key={setIndex}
+                style={{
+                  ...s.setRow,
+                  background: isCompleted
+                    ? 'rgba(48, 209, 88, 0.06)'
+                    : isEven
+                    ? 'var(--fill-secondary)'
+                    : 'transparent',
+                  opacity: isCompleted ? 0.55 : 1,
+                }}
+              >
+                <span style={s.setNum}>{set.setNumber}</span>
+                <input
+                  className="input input-sm"
+                  type="number"
+                  inputMode="numeric"
+                  value={set.reps || ''}
+                  placeholder="0"
+                  onChange={(e) =>
+                    updateSet(exIndex, setIndex, 'reps', parseInt(e.target.value) || 0)
+                  }
+                  readOnly={readOnly}
+                  style={isCompleted ? { textDecoration: 'line-through' } : undefined}
+                />
+                <input
+                  className="input input-sm"
+                  type="number"
+                  inputMode="decimal"
+                  value={set.kilos || ''}
+                  placeholder="0"
+                  onChange={(e) =>
+                    updateSet(exIndex, setIndex, 'kilos', parseFloat(e.target.value) || 0)
+                  }
+                  readOnly={readOnly}
+                  style={isCompleted ? { textDecoration: 'line-through' } : undefined}
+                />
+                <input
+                  type="checkbox"
+                  style={s.checkbox}
+                  checked={set.completed}
+                  onChange={(e) =>
+                    updateSet(exIndex, setIndex, 'completed', e.target.checked)
+                  }
+                  disabled={readOnly}
+                />
+              </div>
+            );
+          })}
 
           {!readOnly && (
             <div style={s.setActions}>
