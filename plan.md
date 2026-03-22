@@ -1,329 +1,154 @@
-# Multi-User Authentication Implementation Plan
+# Plan: Remote MCP Server for Personal Trainer AI Coach
 
-## Overview
+## Decision: Cloudflare Worker (not Lambda)
 
-Replace the single `x-api-key` auth with per-user email/password authentication using JWT tokens. Each user owns their own sessions and records, with full data isolation.
+Claude.ai requires **OAuth 2.1 with PKCE** for remote MCP servers. Implementing OAuth on Lambda means wiring up Cognito or Auth0 as an authorization server, plus discovery endpoints, Dynamic Client Registration, and token refresh. That's heavy for one user.
+
+**Cloudflare Workers** solve this because:
+- `workers-oauth-provider` handles all OAuth 2.1 complexity out of the box (PKCE, DCR, token hashing, refresh)
+- Official MCP server templates exist from Cloudflare — battle-tested
+- Free tier: 100K requests/day (you'll use ~50/day)
+- The Worker calls your **existing deployed API** over HTTPS — no DynamoDB duplication, no code changes to your app
+- Uses **Streamable HTTP** transport (the current MCP standard, SSE is deprecated)
+- Stateless by nature — perfect fit for Workers
+
+### Cost: $0/month
+- Cloudflare Workers free tier
+- No new AWS resources
+- No API costs (uses your Claude subscription)
 
 ---
 
-## Phase 1: Backend — Users Table + Auth Service
+## Architecture
 
-### 1.1 New DynamoDB Table: `Users`
-
-**infra/template.yaml** — add `UsersTable`:
-- Partition key: `id` (String, UUID)
-- GSI `email-index`: partition key `email` (String) — for login lookups
-- PAY_PER_REQUEST billing
-- Add `USERS_TABLE` env var to Lambda function
-
-### 1.2 New Dependencies
-
-**backend/package.json** — add:
-- `bcryptjs` (password hashing, pure JS — works in Lambda without native binaries)
-- `jsonwebtoken` (JWT creation/verification)
-- `@types/bcryptjs` and `@types/jsonwebtoken` (dev)
-
-### 1.3 New Types
-
-**backend/src/types.ts** — add:
-```ts
-interface User {
-  id: string;
-  email: string;
-  passwordHash: string;
-  displayName: string;
-  createdAt: string;
-  updatedAt: string;
-}
-
-interface AuthPayload {       // JWT payload
-  userId: string;
-  email: string;
-}
-
-interface RegisterInput {
-  email: string;
-  password: string;
-  displayName: string;
-}
-
-interface LoginInput {
-  email: string;
-  password: string;
-}
-
-interface AuthResponse {
-  token: string;
-  user: { id: string; email: string; displayName: string };
-}
+```
+claude.ai (Claude Project with coaching system prompt)
+   ↕ (OAuth 2.1 + Streamable HTTP)
+Cloudflare Worker (MCP server + OAuth provider)
+   ↕ (HTTPS + Bearer auth)
+Your existing CloudFront → API Gateway → Lambda → DynamoDB
 ```
 
-### 1.4 New Service: `backend/src/services/users.ts`
-
-Functions:
-- `createUser(input: RegisterInput)` → `User`
-  - Check email uniqueness via GSI query
-  - Hash password with bcrypt (10 rounds)
-  - Generate UUID, store in Users table
-- `getUserByEmail(email: string)` → `User | null`
-  - Query GSI `email-index`
-- `getUserById(id: string)` → `User | null`
-  - GetCommand by primary key
-- `verifyPassword(plaintext: string, hash: string)` → `boolean`
-  - bcrypt.compare
-
-### 1.5 New Service: `backend/src/services/auth.ts`
-
-Functions:
-- `generateToken(user: User)` → `string`
-  - Sign JWT with `{ userId: user.id, email: user.email }`, secret from env `JWT_SECRET`, expiry `7d`
-- `verifyToken(token: string)` → `AuthPayload`
-  - Verify and decode JWT; throw on invalid/expired
-
-### 1.6 Replace Auth Middleware
-
-**backend/src/middleware/auth.ts** — replace `apiKeyAuth`:
-- New `jwtAuth` middleware:
-  - Extract `Authorization: Bearer <token>` header
-  - Call `verifyToken(token)`
-  - Attach `req.user = { userId, email }` to request
-  - 401 if missing/invalid/expired
-- Add TypeScript augmentation for `req.user`:
-  ```ts
-  declare global {
-    namespace Express {
-      interface Request {
-        user?: AuthPayload;
-      }
-    }
-  }
-  ```
-
-### 1.7 New Routes: `backend/src/routes/auth.ts`
-
-- **POST `/api/auth/register`** (no auth required)
-  - Validate email format, password min 8 chars, displayName non-empty
-  - Call `createUser`, `generateToken`
-  - Return `AuthResponse` (201)
-  - 409 if email already exists
-
-- **POST `/api/auth/login`** (no auth required)
-  - Call `getUserByEmail`, `verifyPassword`
-  - Call `generateToken`
-  - Return `AuthResponse` (200)
-  - 401 if invalid credentials
-
-- **GET `/api/auth/me`** (auth required)
-  - Return current user profile (id, email, displayName)
+The Worker acts as:
+1. **OAuth authorization server** for Claude.ai (via workers-oauth-provider)
+2. **MCP tool server** that proxies to your existing API
 
 ---
 
-## Phase 2: Backend — Data Isolation by User
+## MCP Tools (what Claude can call)
 
-### 2.1 Schema Changes
+### Read Tools
+| Tool | What it does | Proxies to |
+|---|---|---|
+| `get_sessions` | List sessions with optional date range | `GET /api/sessions?startDate=&endDate=` |
+| `get_session` | Get a single session by ID | `GET /api/sessions/:id` |
+| `get_strength_prs` | All strength PRs (computed from sessions) | `GET /api/records/strength` |
+| `get_wod_records` | All WOD records with history | `GET /api/records/wods` |
+| `get_manual_records` | Manual records (strength or WOD) | `GET /api/manual-records?type=` |
+| `get_training_summary` | Aggregated coaching overview for last N weeks | Calls multiple endpoints, computes summary |
 
-Both `WorkoutSessions` and `ManualRecords` tables get:
-- New attribute: `userId` (String) on every item
-- New GSI `userId-date-index`:
-  - Partition key: `userId`
-  - Sort key: `date`
-  - This replaces full-table scans with efficient per-user queries
+### Write Tools
+| Tool | What it does | Proxies to |
+|---|---|---|
+| `create_session` | Create a planned workout | `POST /api/sessions` |
+| `update_session` | Update session (mark complete, edit) | `PUT /api/sessions/:id` |
+| `create_strength_pr` | Log a manual strength PR | `POST /api/manual-records/strength` |
+| `create_wod_record` | Log a manual WOD record | `POST /api/manual-records/wod` |
 
-**infra/template.yaml** — add GSI definitions to both tables.
-
-### 2.2 Update `backend/src/services/dynamodb.ts`
-
-Every function receives `userId` parameter:
-
-- `createSession(userId, input)` — store `userId` on item
-- `getSession(userId, id)` — get by id, then verify `item.userId === userId` (or 404)
-- `updateSession(userId, id, input)` — verify ownership before update
-- `deleteSession(userId, id)` — verify ownership before delete
-- `listSessions(userId, startDate?, endDate?)` — **Query** GSI `userId-date-index` instead of Scan
-  - Use `KeyConditionExpression: 'userId = :uid'`
-  - Add `ScanIndexForward: false` for descending date order
-  - Filter by date range in key condition when provided
-
-### 2.3 Update `backend/src/services/manualRecords.ts`
-
-Same pattern — every function receives `userId`:
-
-- `createManualStrengthPR(userId, input)` — store `userId`
-- `createManualWodRecord(userId, input)` — store `userId`
-- `getManualRecord(userId, id)` — verify ownership
-- `deleteManualRecord(userId, id)` — verify ownership
-- `listManualRecords(userId, type?)` — **Query** GSI `userId-date-index`
-
-### 2.4 Update `backend/src/services/records.ts`
-
-- `getStrengthPRs(userId)` — pass userId to listSessions
-- `getWodRecords(userId)` — pass userId to listSessions
-
-### 2.5 Update All Route Handlers
-
-Every route handler extracts `req.user!.userId` and passes it to service calls:
-
-- **sessions.ts**: `req.user!.userId` → all service calls
-- **records.ts**: `req.user!.userId` → getStrengthPRs, getWodRecords
-- **manualRecords.ts**: `req.user!.userId` → all service calls
-
-### 2.6 Update `backend/src/app.ts`
-
-- Mount `/api/auth` routes **without** auth middleware
-- Replace `apiKeyAuth` with `jwtAuth` on all `/api/sessions`, `/api/records`, `/api/manual-records` routes
+### The Key Tool: `get_training_summary`
+This is what makes the MCP server a coach, not just a data proxy. It calls multiple endpoints and computes:
+- Sessions per week trend (last N weeks)
+- Volume per exercise (sets x reps x kg) with week-over-week delta
+- PR progression timeline per exercise
+- WOD time improvements
+- Muscle group frequency (inferred from exercise names)
+- Rest day patterns and consecutive training days
 
 ---
 
-## Phase 3: Frontend — Auth Flow
+## Implementation Steps
 
-### 3.1 New Types
-
-**frontend/src/types.ts** — add:
-```ts
-interface AuthUser {
-  id: string;
-  email: string;
-  displayName: string;
-}
-
-interface AuthResponse {
-  token: string;
-  user: AuthUser;
-}
+### Step 1: Create project structure
+New `mcp-server/` directory at repo root:
+```
+mcp-server/
+├── package.json
+├── tsconfig.json
+├── wrangler.toml
+└── src/
+    ├── index.ts          # Worker entry: OAuth + MCP server wiring
+    ├── tools.ts          # MCP tool definitions and handlers
+    └── api-client.ts     # HTTP client wrapping your existing API
 ```
 
-### 3.2 Update API Client
+### Step 2: Implement OAuth + MCP entry point (`src/index.ts`)
+- Use `workers-oauth-provider` to handle all OAuth 2.1 flows
+- Use `@modelcontextprotocol/sdk` with Streamable HTTP transport (sessionless mode)
+- Register all tools from `tools.ts`
+- On each authenticated MCP request, call your API with the stored app password
 
-**frontend/src/services/api.ts**:
-- Store JWT in `localStorage` under key `auth_token`
-- Replace `x-api-key` header with `Authorization: Bearer <token>`
-- Add `api.register(email, password, displayName)` → `AuthResponse`
-- Add `api.login(email, password)` → `AuthResponse`
-- Add `api.getMe()` → `AuthUser`
-- Add `api.logout()` — clear localStorage token
-- Add response interceptor: on 401, clear token and redirect to `/login`
+### Step 3: Implement API client (`src/api-client.ts`)
+Simple HTTP client that:
+- Takes your CloudFront URL + app password from Worker secrets
+- Provides typed methods: `listSessions()`, `getStrengthPRs()`, etc.
+- Handles errors and returns clean data to the MCP tools
 
-### 3.3 New Hook: `frontend/src/hooks/useAuth.ts`
+### Step 4: Implement tools (`src/tools.ts`)
+- Define each tool with name, description, input schema (using Zod), and handler
+- Each handler calls the API client and returns formatted results
+- `get_training_summary` does multi-call aggregation and computes derived metrics
 
-Auth context + provider:
-```ts
-interface AuthContextType {
-  user: AuthUser | null;
-  loading: boolean;
-  login: (email: string, password: string) => Promise<void>;
-  register: (email: string, password: string, displayName: string) => Promise<void>;
-  logout: () => void;
-}
+### Step 5: Configure and deploy
+```bash
+cd mcp-server
+npm install
+wrangler secret put API_PASSWORD    # your app password
+wrangler secret put API_URL         # your CloudFront URL
+wrangler deploy
 ```
 
-- On mount: check localStorage for token → call `api.getMe()` to validate
-- `login`: call api.login, store token, set user state
-- `register`: call api.register, store token, set user state
-- `logout`: call api.logout, clear user state, navigate to `/login`
+### Step 6: Connect to Claude.ai
+1. In your Claude Project settings → Integrations → Add MCP Server
+2. Enter URL: `https://personal-trainer-mcp.<your-subdomain>.workers.dev/mcp`
+3. Claude.ai discovers OAuth, prompts you to authorize (one-time)
+4. Tools appear in Claude's toolbox
 
-### 3.4 New Pages
+### Step 7: Set up Claude Project system prompt
+Add coaching context to your Claude Project:
+```
+You are my personal training coach with live access to my workout data via MCP tools.
 
-**frontend/src/pages/Login.tsx**:
-- Email + password fields
-- "Log In" button
-- Link to Register page
-- Error display for invalid credentials
-- Redirect to `/` on success
+My profile:
+- [Your goals, equipment, schedule, injuries, preferences]
 
-**frontend/src/pages/Register.tsx**:
-- Display name + email + password + confirm password fields
-- Client-side validation (email format, password >= 8 chars, passwords match)
-- "Create Account" button
-- Link to Login page
-- Redirect to `/` on success
-
-### 3.5 Update App.tsx
-
-- Wrap app with `AuthProvider`
-- Add `/login` and `/register` routes (public)
-- Protected route wrapper: redirect to `/login` if not authenticated
-- Show loading spinner while auth state initializes
-
-### 3.6 Update Header
-
-- Show user display name / initial avatar
-- Add logout action (either button or dropdown)
+Guidelines:
+- Always fetch fresh data before answering — don't rely on conversation history
+- Use get_training_summary for overview questions
+- Use get_sessions with date ranges for specific periods
+- When programming workouts, use create_session to add them directly to my app
+- Flag volume concerns, missed muscle groups, or stalled progression
+- Suggest deloads after 4-6 weeks of high volume
+- Compare WOD times against my previous attempts
+```
 
 ---
 
-## Phase 4: Infrastructure
+## What Changes in Existing Code?
 
-### 4.1 `infra/template.yaml` Changes
-
-1. **New `UsersTable`** resource:
-   - Partition key: `id` (S)
-   - GSI `email-index`: partition key `email` (S)
-
-2. **GSI on `WorkoutSessionsTable`**:
-   - `userId-date-index`: partition `userId` (S), sort `date` (S)
-
-3. **GSI on `ManualRecordsTable`**:
-   - `userId-date-index`: partition `userId` (S), sort `date` (S)
-
-4. **Lambda environment variables** — add:
-   - `USERS_TABLE: !Ref UsersTable`
-   - `JWT_SECRET` (from parameter or Secrets Manager)
-
-5. **API Gateway** — remove API key requirement (JWT handles auth now)
-
-### 4.2 Environment Variables
-
-**backend/.env.example** — add:
-```
-USERS_TABLE=Users-dev
-JWT_SECRET=your-secret-here
-```
-
-**frontend/.env.example** — remove `VITE_API_KEY` (no longer needed)
+**Nothing.** The MCP server is a standalone project that calls your existing API. No changes to frontend, backend, or infrastructure.
 
 ---
 
-## Migration Strategy
+## Summary
 
-For existing data (if any production data exists):
-1. Deploy tables with new GSIs first (additive, non-breaking)
-2. Run a one-time migration script that adds `userId` to all existing items, assigning them to a default "migrated" user account
-3. Deploy new backend code
-4. Deploy new frontend
-
-For fresh/dev environments: no migration needed — just deploy everything together.
-
----
-
-## File Change Summary
-
-### New Files (10)
-| File | Description |
-|------|-------------|
-| `backend/src/services/users.ts` | User CRUD + password verification |
-| `backend/src/services/auth.ts` | JWT generation + verification |
-| `backend/src/routes/auth.ts` | Register, login, me endpoints |
-| `frontend/src/pages/Login.tsx` | Login page |
-| `frontend/src/pages/Register.tsx` | Registration page |
-| `frontend/src/hooks/useAuth.ts` | Auth context + provider |
-
-### Modified Files (13)
-| File | Changes |
-|------|---------|
-| `backend/package.json` | Add bcryptjs, jsonwebtoken |
-| `backend/src/types.ts` | Add User, Auth types |
-| `backend/src/middleware/auth.ts` | Replace apiKeyAuth → jwtAuth |
-| `backend/src/app.ts` | Mount auth routes, swap middleware |
-| `backend/src/services/dynamodb.ts` | Add userId to all operations, query GSI |
-| `backend/src/services/manualRecords.ts` | Add userId to all operations, query GSI |
-| `backend/src/services/records.ts` | Pass userId through |
-| `backend/src/routes/sessions.ts` | Extract userId from req.user |
-| `backend/src/routes/records.ts` | Extract userId from req.user |
-| `backend/src/routes/manualRecords.ts` | Extract userId from req.user |
-| `frontend/src/types.ts` | Add AuthUser, AuthResponse |
-| `frontend/src/services/api.ts` | JWT storage, auth endpoints, 401 handling |
-| `frontend/src/App.tsx` | AuthProvider, protected routes, login/register routes |
-| `frontend/src/components/Header.tsx` | User display + logout |
-| `infra/template.yaml` | UsersTable, GSIs, env vars |
-| `backend/.env.example` | Add USERS_TABLE, JWT_SECRET |
-| `frontend/.env.example` | Remove VITE_API_KEY |
+| Aspect | Detail |
+|---|---|
+| Platform | Cloudflare Workers (free tier) |
+| Auth | OAuth 2.1 via workers-oauth-provider |
+| Transport | Streamable HTTP (sessionless) |
+| Data access | Proxies to existing API — no duplication |
+| Cost | $0/month |
+| Code | ~300 lines TypeScript, 3 source files |
+| Changes to existing app | None |
+| Client | Claude.ai Projects (browser) |
+| Deploy | `wrangler deploy` (seconds) |
