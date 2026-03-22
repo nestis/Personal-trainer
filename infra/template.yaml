@@ -27,6 +27,7 @@ Globals:
         SESSIONS_TABLE: !Ref SessionsTable
         RECORDS_TABLE: !Ref ManualRecordsTable
         APP_PASSWORD: !Ref AppPassword
+        FRONTEND_URL: !Sub 'https://${FrontendDistribution.DomainName}'
     Tags:
       Project: workout-tracker
       Environment: !Ref Environment

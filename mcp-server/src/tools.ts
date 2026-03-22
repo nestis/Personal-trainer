@@ -2,6 +2,17 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { ApiClient } from "./api-client";
 
+type ToolResult = { content: { type: "text"; text: string }[]; isError?: boolean };
+
+function ok(data: unknown): ToolResult {
+  return { content: [{ type: "text", text: typeof data === "string" ? data : JSON.stringify(data, null, 2) }] };
+}
+
+function fail(err: unknown): ToolResult {
+  const msg = err instanceof Error ? err.message : "Unknown error";
+  return { content: [{ type: "text", text: `Error: ${msg}` }], isError: true };
+}
+
 export function registerTools(server: McpServer, api: ApiClient) {
   server.tool(
     "get_sessions",
@@ -11,10 +22,8 @@ export function registerTools(server: McpServer, api: ApiClient) {
       endDate: z.string().optional().describe("End date (YYYY-MM-DD)"),
     },
     async ({ startDate, endDate }) => {
-      const sessions = await api.listSessions(startDate, endDate);
-      return {
-        content: [{ type: "text", text: JSON.stringify(sessions, null, 2) }],
-      };
+      try { return ok(await api.listSessions(startDate, endDate)); }
+      catch (e) { return fail(e); }
     },
   );
 
@@ -23,10 +32,8 @@ export function registerTools(server: McpServer, api: ApiClient) {
     "Get a single workout session by ID",
     { id: z.string().describe("Session ID") },
     async ({ id }) => {
-      const session = await api.getSession(id);
-      return {
-        content: [{ type: "text", text: JSON.stringify(session, null, 2) }],
-      };
+      try { return ok(await api.getSession(id)); }
+      catch (e) { return fail(e); }
     },
   );
 
@@ -56,10 +63,8 @@ export function registerTools(server: McpServer, api: ApiClient) {
       notes: z.string().optional(),
     },
     async ({ date, strength, wod, notes }) => {
-      const session = await api.createSession({ date, strength, wod, notes });
-      return {
-        content: [{ type: "text", text: JSON.stringify(session, null, 2) }],
-      };
+      try { return ok(await api.createSession({ date, strength, wod, notes })); }
+      catch (e) { return fail(e); }
     },
   );
 
@@ -91,10 +96,8 @@ export function registerTools(server: McpServer, api: ApiClient) {
       notes: z.string().optional(),
     },
     async ({ id, ...data }) => {
-      const session = await api.updateSession(id, data);
-      return {
-        content: [{ type: "text", text: JSON.stringify(session, null, 2) }],
-      };
+      try { return ok(await api.updateSession(id, data)); }
+      catch (e) { return fail(e); }
     },
   );
 
@@ -103,10 +106,8 @@ export function registerTools(server: McpServer, api: ApiClient) {
     "Get all strength personal records computed from sessions",
     {},
     async () => {
-      const prs = await api.getStrengthPRs();
-      return {
-        content: [{ type: "text", text: JSON.stringify(prs, null, 2) }],
-      };
+      try { return ok(await api.getStrengthPRs()); }
+      catch (e) { return fail(e); }
     },
   );
 
@@ -115,10 +116,8 @@ export function registerTools(server: McpServer, api: ApiClient) {
     "Get all WOD (Workout of the Day) records with history",
     {},
     async () => {
-      const records = await api.getWodRecords();
-      return {
-        content: [{ type: "text", text: JSON.stringify(records, null, 2) }],
-      };
+      try { return ok(await api.getWodRecords()); }
+      catch (e) { return fail(e); }
     },
   );
 
@@ -129,10 +128,8 @@ export function registerTools(server: McpServer, api: ApiClient) {
       type: z.enum(["strength", "wod"]).optional().describe("Filter by record type"),
     },
     async ({ type }) => {
-      const records = await api.getManualRecords(type);
-      return {
-        content: [{ type: "text", text: JSON.stringify(records, null, 2) }],
-      };
+      try { return ok(await api.getManualRecords(type)); }
+      catch (e) { return fail(e); }
     },
   );
 
@@ -147,10 +144,8 @@ export function registerTools(server: McpServer, api: ApiClient) {
       notes: z.string().optional(),
     },
     async (data) => {
-      const record = await api.createManualStrengthPR(data);
-      return {
-        content: [{ type: "text", text: JSON.stringify(record, null, 2) }],
-      };
+      try { return ok(await api.createManualStrengthPR(data)); }
+      catch (e) { return fail(e); }
     },
   );
 
@@ -168,10 +163,8 @@ export function registerTools(server: McpServer, api: ApiClient) {
       notes: z.string().optional(),
     },
     async (data) => {
-      const record = await api.createManualWodRecord(data);
-      return {
-        content: [{ type: "text", text: JSON.stringify(record, null, 2) }],
-      };
+      try { return ok(await api.createManualWodRecord(data)); }
+      catch (e) { return fail(e); }
     },
   );
 
@@ -182,10 +175,8 @@ export function registerTools(server: McpServer, api: ApiClient) {
       weeks: z.number().default(6).describe("Number of weeks to analyze (default: 6)"),
     },
     async ({ weeks }) => {
-      const summary = await api.getTrainingSummary(weeks);
-      return {
-        content: [{ type: "text", text: summary }],
-      };
+      try { return ok(await api.getTrainingSummary(weeks)); }
+      catch (e) { return fail(e); }
     },
   );
 }

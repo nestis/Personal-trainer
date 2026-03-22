@@ -77,7 +77,8 @@ export async function updateSession(
     new PutCommand({
       TableName: TABLE_NAME,
       Item: updated,
-      ConditionExpression: 'attribute_exists(id)',
+      ConditionExpression: 'attribute_exists(id) AND userId = :uid',
+      ExpressionAttributeValues: { ':uid': userId },
     })
   );
 
@@ -85,16 +86,13 @@ export async function updateSession(
 }
 
 export async function deleteSession(userId: string, id: string): Promise<boolean> {
-  // Verify ownership first
-  const existing = await getSession(userId, id);
-  if (!existing) return false;
-
   try {
     await docClient.send(
       new DeleteCommand({
         TableName: TABLE_NAME,
         Key: { id },
-        ConditionExpression: 'attribute_exists(id)',
+        ConditionExpression: 'attribute_exists(id) AND userId = :uid',
+        ExpressionAttributeValues: { ':uid': userId },
         ReturnValues: 'ALL_OLD',
       })
     );

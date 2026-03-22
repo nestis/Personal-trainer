@@ -121,13 +121,17 @@ export async function updateManualWodRecord(userId: string, id: string, input: {
   if (setParts.length > 0) updateExpr += `SET ${setParts.join(', ')}`;
   if (removeParts.length > 0) updateExpr += ` REMOVE ${removeParts.join(', ')}`;
 
+  names['#userId'] = 'userId';
+  values[':uid'] = userId;
+
   const result = await docClient.send(
     new UpdateCommand({
       TableName: TABLE_NAME,
       Key: { id },
       UpdateExpression: updateExpr,
+      ConditionExpression: '#userId = :uid',
       ExpressionAttributeNames: names,
-      ExpressionAttributeValues: Object.keys(values).length > 0 ? values : undefined,
+      ExpressionAttributeValues: values,
       ReturnValues: 'ALL_NEW',
     })
   );
@@ -145,15 +149,13 @@ export async function getManualRecord(userId: string, id: string): Promise<Manua
 }
 
 export async function deleteManualRecord(userId: string, id: string): Promise<boolean> {
-  const existing = await getManualRecord(userId, id);
-  if (!existing) return false;
-
   try {
     await docClient.send(
       new DeleteCommand({
         TableName: TABLE_NAME,
         Key: { id },
-        ConditionExpression: 'attribute_exists(id)',
+        ConditionExpression: 'attribute_exists(id) AND userId = :uid',
+        ExpressionAttributeValues: { ':uid': userId },
         ReturnValues: 'ALL_OLD',
       })
     );

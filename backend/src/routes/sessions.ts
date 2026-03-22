@@ -6,6 +6,7 @@ import {
   deleteSession,
   listSessions,
 } from '../services/dynamodb';
+import { validateCreateSession, validateUpdateSession } from '../middleware/validate';
 
 const router = Router();
 
@@ -43,14 +44,9 @@ router.get('/:id', async (req: Request, res: Response) => {
 });
 
 // Create a new session (planned)
-router.post('/', async (req: Request, res: Response) => {
+router.post('/', validateCreateSession, async (req: Request, res: Response) => {
   try {
     const userId = req.userId!;
-    const { date, strength, wod } = req.body;
-    if (!date || !strength || !wod) {
-      res.status(400).json({ error: 'date, strength, and wod are required' });
-      return;
-    }
     const session = await createSession(userId, req.body);
     res.status(201).json(session);
   } catch (error) {
@@ -60,18 +56,10 @@ router.post('/', async (req: Request, res: Response) => {
 });
 
 // Update a session (modify plan or log actuals)
-router.put('/:id', async (req: Request, res: Response) => {
+router.put('/:id', validateUpdateSession, async (req: Request, res: Response) => {
   try {
     const userId = req.userId!;
-    const { date, status, strength, wod, notes } = req.body;
-    const sanitizedInput = {
-      ...(date !== undefined && { date }),
-      ...(status !== undefined && { status }),
-      ...(strength !== undefined && { strength }),
-      ...(wod !== undefined && { wod }),
-      ...(notes !== undefined && { notes }),
-    };
-    const session = await updateSession(userId, req.params.id, sanitizedInput);
+    const session = await updateSession(userId, req.params.id, req.body);
     if (!session) {
       res.status(404).json({ error: 'Session not found' });
       return;
