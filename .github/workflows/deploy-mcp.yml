@@ -1,0 +1,108 @@
+name: Deploy MCP Server to Cloudflare
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'mcp-server/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-mcp
+  cancel-in-progress: false
+
+env:
+  NODE_VERSION: '22'
+
+jobs:
+  # ────────────────────────────────────────────────────
+  # Job 1: Type-check
+  # ────────────────────────────────────────────────────
+  typecheck:
+    name: Type Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: mcp-server/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+        working-directory: mcp-server
+
+      - name: Type check
+        run: npx tsc --noEmit
+        working-directory: mcp-server
+
+  # ────────────────────────────────────────────────────
+  # Job 2: Deploy to Cloudflare Workers
+  # ────────────────────────────────────────────────────
+  deploy:
+    name: Deploy Worker
+    needs: typecheck
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: mcp-server/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+        working-directory: mcp-server
+
+      - name: Deploy with Wrangler
+        run: npx wrangler deploy
+        working-directory: mcp-server
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
+  # ────────────────────────────────────────────────────
+  # Job 3: Verify deployment
+  # ────────────────────────────────────────────────────
+  verify:
+    name: Verify Deployment
+    needs: deploy
+    runs-on: ubuntu-latest
+    steps:
+      - name: Health check
+        run: |
+          WORKER_URL="${{ secrets.MCP_WORKER_URL }}"
+          if [ -z "$WORKER_URL" ]; then
+            echo "MCP_WORKER_URL secret not set, skipping health check"
+            exit 0
+          fi
+
+          echo "Checking $WORKER_URL ..."
+          for i in 1 2 3; do
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$WORKER_URL" || true)
+            if [ "$STATUS" = "200" ]; then
+              echo "Health check passed (attempt $i)"
+              exit 0
+            fi
+            echo "Attempt $i: got $STATUS, retrying in 5s..."
+            sleep 5
+          done
+
+          echo "Health check failed after 3 attempts"
+          exit 1
+
+      - name: Print deployment info
+        run: |
+          echo "## MCP Server Deployed" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "Worker: \`personal-trainer-mcp\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "Connect in Claude.ai → Settings → Integrations using your Worker URL's \`/mcp\` endpoint." >> "$GITHUB_STEP_SUMMARY"
