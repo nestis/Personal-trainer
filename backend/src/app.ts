@@ -9,6 +9,10 @@ import manualRecordsRouter from './routes/manualRecords';
 
 const app = express();
 
+// Behind API Gateway / CloudFront — trust the immediate proxy
+// so express-rate-limit uses X-Forwarded-For for client IP
+app.set('trust proxy', 1);
+
 app.use(helmet());
 app.use(cors({
   origin: process.env.FRONTEND_URL || false,
