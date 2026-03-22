@@ -78,6 +78,12 @@ export class ApiClient {
     this.password = config.API_PASSWORD;
   }
 
+  private assertSafePathSegment(value: string): void {
+    if (!value || /[\/\\\.#\?&]/.test(value) || value.includes('..')) {
+      throw new Error('Invalid path parameter');
+    }
+  }
+
   private async request<T>(path: string, options?: RequestInit): Promise<T> {
     const url = `${this.baseUrl}${path}`;
     const res = await fetch(url, {
@@ -90,8 +96,7 @@ export class ApiClient {
     });
 
     if (!res.ok) {
-      const text = await res.text();
-      throw new Error(`API ${res.status}: ${text}`);
+      throw new Error(`API request failed (${res.status})`);
     }
 
     return res.json() as Promise<T>;
@@ -106,6 +111,7 @@ export class ApiClient {
   }
 
   async getSession(id: string): Promise<Session> {
+    this.assertSafePathSegment(id);
     return this.request<Session>(`/api/sessions/${id}`);
   }
 
@@ -128,6 +134,7 @@ export class ApiClient {
     wod?: WOD;
     notes?: string;
   }): Promise<Session> {
+    this.assertSafePathSegment(id);
     return this.request<Session>(`/api/sessions/${id}`, {
       method: 'PUT',
       body: JSON.stringify(data),
