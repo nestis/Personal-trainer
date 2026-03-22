@@ -1,0 +1,27 @@
+name = "personal-trainer-mcp"
+main = "src/index.ts"
+compatibility_date = "2025-03-14"
+compatibility_flags = ["nodejs_compat"]
+
+# Secrets (set via `wrangler secret put`):
+# - API_URL: Your CloudFront/API Gateway URL (e.g. https://xyz.cloudfront.net)
+# - API_PASSWORD: Your app password for the backend API
+# - COOKIE_ENCRYPTION_KEY: 32-char random string for encrypting OAuth cookies
+
+[[kv_namespaces]]
+binding = "OAUTH_KV"
+id = "PLACEHOLDER_KV_ID"
+# After creating: wrangler kv namespace create OAUTH_KV
+# Then replace PLACEHOLDER_KV_ID with the actual ID
+
+[durable_objects]
+bindings = [
+  { name = "MCP_OBJECT", class_name = "PersonalTrainerMCP" }
+]
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["PersonalTrainerMCP"]
+
+[observability]
+enabled = true
