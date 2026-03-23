@@ -112,7 +112,9 @@ function Header() {
   const { logout } = useAuth();
   const isHome = location.pathname === '/';
   const isRecords = location.pathname === '/records';
-  const isSubPage = !isHome && !isRecords;
+  const isHrv = location.pathname === '/hrv';
+  const isTopNav = isHome || isRecords || isHrv;
+  const isSubPage = !isTopNav;
   const pageTitle = getPageTitle(location.pathname);
 
   const handleLogout = () => {
@@ -139,10 +141,15 @@ function Header() {
         {pageTitle && <span style={s.centerTitle}>{pageTitle}</span>}
 
         <div style={s.nav}>
-          {!isSubPage && (
-            <Link to="/records" style={isRecords ? s.navLinkActive : s.navLink}>
-              Records
-            </Link>
+          {isTopNav && (
+            <>
+              <Link to="/hrv" style={isHrv ? s.navLinkActive : s.navLink}>
+                HRV
+              </Link>
+              <Link to="/records" style={isRecords ? s.navLinkActive : s.navLink}>
+                Records
+              </Link>
+            </>
           )}
           {isHome && (
             <Link to="/new" style={s.addBtn}>

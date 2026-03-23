@@ -102,3 +102,15 @@ export interface ManualWodRecord {
 
 export type ManualRecord = ManualStrengthPR | ManualWodRecord;
 
+// HRV (Heart Rate Variability) daily measurements
+export interface HrvRecord {
+  id: string;
+  date: string; // YYYY-MM-DD, unique per user per day
+  min: number;
+  max: number;
+  avg: number;
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+

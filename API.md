@@ -198,6 +198,59 @@ Works for both strength and WOD manual records. Returns `204 No Content`.
 
 ---
 
+### HRV (Heart Rate Variability)
+
+Daily HRV measurements tracking min, max, and average values in milliseconds.
+
+#### List HRV Records
+
+```
+GET /api/hrv?startDate=YYYY-MM-DD&endDate=YYYY-MM-DD
+```
+
+Both query params are optional. Returns `HrvRecord[]` sorted by date descending.
+
+#### Create HRV Record
+
+```
+POST /api/hrv
+Content-Type: application/json
+
+{
+  "date": "2026-03-23",
+  "min": 35,
+  "max": 120,
+  "avg": 65,
+  "notes": "Slept 8 hours, feeling rested"
+}
+```
+
+`date` (YYYY-MM-DD), `min`, `max`, and `avg` are required. All values must be non-negative numbers. `min` cannot exceed `max`. Returns `HrvRecord`.
+
+#### Update HRV Record
+
+```
+PUT /api/hrv/:id
+Content-Type: application/json
+
+{
+  "avg": 68,
+  "notes": "Corrected value"
+}
+```
+
+All fields are optional — only provided fields are updated. Returns the updated `HrvRecord`.
+
+#### Delete HRV Record
+
+```
+DELETE /api/hrv/:id
+```
+
+Returns `204 No Content`.
+
+---
+
 ## Data Types
 
 ### Session
@@ -313,6 +366,21 @@ Works for both strength and WOD manual records. Returns `204 No Content`.
   notes?: string;
   createdAt: string;
   updatedAt: string;
+}
+```
+
+### HrvRecord
+
+```typescript
+{
+  id: string;
+  date: string;              // "YYYY-MM-DD"
+  min: number;               // Minimum HRV in ms
+  max: number;               // Maximum HRV in ms
+  avg: number;               // Average HRV in ms
+  notes?: string;
+  createdAt: string;         // ISO datetime
+  updatedAt: string;         // ISO datetime
 }
 ```
 

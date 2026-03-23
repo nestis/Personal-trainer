@@ -6,6 +6,7 @@ import { passwordAuth } from './middleware/auth';
 import sessionsRouter from './routes/sessions';
 import recordsRouter from './routes/records';
 import manualRecordsRouter from './routes/manualRecords';
+import hrvRouter from './routes/hrv';
 
 const app = express();
 
@@ -44,5 +45,6 @@ app.post('/api/auth/verify', authLimiter, passwordAuth, (_req, res) => {
 app.use('/api/sessions', passwordAuth, sessionsRouter);
 app.use('/api/records', passwordAuth, recordsRouter);
 app.use('/api/manual-records', passwordAuth, manualRecordsRouter);
+app.use('/api/hrv', passwordAuth, hrvRouter);
 
 export default app;

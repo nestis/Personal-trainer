@@ -3,6 +3,7 @@ import SessionList from './pages/SessionList';
 import SessionForm from './pages/SessionForm';
 import SessionDetail from './pages/SessionDetail';
 import Records from './pages/Records';
+import Hrv from './pages/Hrv';
 import Login from './pages/Login';
 import Header from './components/Header';
 import Spinner from './components/Spinner';
@@ -42,6 +43,7 @@ function AppRoutes() {
             <Route path="/session/:id" element={<ProtectedRoute><SessionDetail /></ProtectedRoute>} />
             <Route path="/session/:id/edit" element={<ProtectedRoute><SessionForm /></ProtectedRoute>} />
             <Route path="/records" element={<ProtectedRoute><Records /></ProtectedRoute>} />
+            <Route path="/hrv" element={<ProtectedRoute><Hrv /></ProtectedRoute>} />
           </Routes>
         </div>
       </main>

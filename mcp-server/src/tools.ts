@@ -169,6 +169,52 @@ export function registerTools(server: McpServer, api: ApiClient) {
   );
 
   server.tool(
+    "get_hrv_records",
+    "Get HRV (Heart Rate Variability) daily measurements with optional date range filter. Returns min, max, and avg values per day.",
+    {
+      startDate: z.string().optional().describe("Start date (YYYY-MM-DD)"),
+      endDate: z.string().optional().describe("End date (YYYY-MM-DD)"),
+    },
+    async ({ startDate, endDate }) => {
+      try { return ok(await api.listHrvRecords(startDate, endDate)); }
+      catch (e) { return fail(e); }
+    },
+  );
+
+  server.tool(
+    "create_hrv_record",
+    "Log a daily HRV (Heart Rate Variability) measurement with min, max, and avg values in milliseconds",
+    {
+      date: z.string().describe("Date (YYYY-MM-DD)"),
+      min: z.number().describe("Minimum HRV in ms"),
+      max: z.number().describe("Maximum HRV in ms"),
+      avg: z.number().describe("Average HRV in ms"),
+      notes: z.string().optional().describe("Optional notes (sleep quality, stress, etc.)"),
+    },
+    async (data) => {
+      try { return ok(await api.createHrvRecord(data)); }
+      catch (e) { return fail(e); }
+    },
+  );
+
+  server.tool(
+    "update_hrv_record",
+    "Update an existing HRV measurement",
+    {
+      id: z.string().describe("HRV record ID"),
+      date: z.string().optional(),
+      min: z.number().optional(),
+      max: z.number().optional(),
+      avg: z.number().optional(),
+      notes: z.string().optional(),
+    },
+    async ({ id, ...data }) => {
+      try { return ok(await api.updateHrvRecord(id, data)); }
+      catch (e) { return fail(e); }
+    },
+  );
+
+  server.tool(
     "get_training_summary",
     "Get an aggregated training summary for coaching analysis — sessions per week, volume by exercise, PRs, WOD records, and recovery patterns",
     {

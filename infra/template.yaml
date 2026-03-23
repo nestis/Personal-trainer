@@ -26,6 +26,7 @@ Globals:
       Variables:
         SESSIONS_TABLE: !Ref SessionsTable
         RECORDS_TABLE: !Ref ManualRecordsTable
+        HRV_TABLE: !Ref HrvTable
         APP_PASSWORD: !Ref AppPassword
     Tags:
       Project: workout-tracker
@@ -117,6 +118,45 @@ Resources:
         - Key: ManagedBy
           Value: SAM
 
+  # DynamoDB Table for HRV Records
+  HrvTable:
+    Type: AWS::DynamoDB::Table
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      TableName: !Sub 'HrvRecords-${Environment}'
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: id
+          AttributeType: S
+        - AttributeName: userId
+          AttributeType: S
+        - AttributeName: date
+          AttributeType: S
+      KeySchema:
+        - AttributeName: id
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: userId-date-index
+          KeySchema:
+            - AttributeName: userId
+              KeyType: HASH
+            - AttributeName: date
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
+      SSESpecification:
+        SSEEnabled: true
+      Tags:
+        - Key: Project
+          Value: workout-tracker
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: ManagedBy
+          Value: SAM
+
   # DynamoDB Table for Users (retained for backward compatibility, no longer used by app)
   UsersTable:
     Type: AWS::DynamoDB::Table
@@ -164,6 +204,8 @@ Resources:
             TableName: !Ref SessionsTable
         - DynamoDBCrudPolicy:
             TableName: !Ref ManualRecordsTable
+        - DynamoDBCrudPolicy:
+            TableName: !Ref HrvTable
       Events:
         HealthCheck:
           Type: Api
@@ -278,6 +320,9 @@ Outputs:
   ManualRecordsTableName:
     Description: DynamoDB manual records table name
     Value: !Ref ManualRecordsTable
+  HrvTableName:
+    Description: DynamoDB HRV records table name
+    Value: !Ref HrvTable
   CloudFrontDistributionId:
     Description: CloudFront distribution ID for cache invalidation
     Value: !Ref FrontendDistribution

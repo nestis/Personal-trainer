@@ -69,6 +69,17 @@ interface ManualRecord {
   maxHeartRate?: number;
 }
 
+interface HrvRecord {
+  id: string;
+  date: string;
+  min: number;
+  max: number;
+  avg: number;
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export class ApiClient {
   private baseUrl: string;
   private password: string;
@@ -179,6 +190,41 @@ export class ApiClient {
   }): Promise<ManualRecord> {
     return this.request<ManualRecord>('/api/manual-records/wod', {
       method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async listHrvRecords(startDate?: string, endDate?: string): Promise<HrvRecord[]> {
+    const params = new URLSearchParams();
+    if (startDate) params.set('startDate', startDate);
+    if (endDate) params.set('endDate', endDate);
+    const qs = params.toString();
+    return this.request<HrvRecord[]>(`/api/hrv${qs ? `?${qs}` : ''}`);
+  }
+
+  async createHrvRecord(data: {
+    date: string;
+    min: number;
+    max: number;
+    avg: number;
+    notes?: string;
+  }): Promise<HrvRecord> {
+    return this.request<HrvRecord>('/api/hrv', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async updateHrvRecord(id: string, data: {
+    date?: string;
+    min?: number;
+    max?: number;
+    avg?: number;
+    notes?: string;
+  }): Promise<HrvRecord> {
+    this.assertSafePathSegment(id);
+    return this.request<HrvRecord>(`/api/hrv/${id}`, {
+      method: 'PUT',
       body: JSON.stringify(data),
     });
   }

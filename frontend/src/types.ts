@@ -86,3 +86,14 @@ export interface ManualWodRecord {
 
 export type ManualRecord = ManualStrengthPR | ManualWodRecord;
 
+export interface HrvRecord {
+  id: string;
+  date: string;
+  min: number;
+  max: number;
+  avg: number;
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+

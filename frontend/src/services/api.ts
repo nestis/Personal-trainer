@@ -1,4 +1,4 @@
-import { Session, StrengthPR, WodRecord, ManualRecord, ManualStrengthPR, ManualWodRecord } from '../types';
+import { Session, StrengthPR, WodRecord, ManualRecord, ManualStrengthPR, ManualWodRecord, HrvRecord } from '../types';
 
 const API_BASE = import.meta.env.VITE_API_URL || '/api';
 
@@ -152,5 +152,26 @@ export const api = {
 
   deleteManualRecord(id: string): Promise<void> {
     return request(`/manual-records/${id}`, { method: 'DELETE' });
+  },
+
+  // HRV
+  listHrvRecords(startDate?: string, endDate?: string): Promise<HrvRecord[]> {
+    const params = new URLSearchParams();
+    if (startDate) params.set('startDate', startDate);
+    if (endDate) params.set('endDate', endDate);
+    const query = params.toString();
+    return request(`/hrv${query ? `?${query}` : ''}`);
+  },
+
+  createHrvRecord(data: { date: string; min: number; max: number; avg: number; notes?: string }): Promise<HrvRecord> {
+    return request('/hrv', { method: 'POST', body: JSON.stringify(data) });
+  },
+
+  updateHrvRecord(id: string, data: { date?: string; min?: number; max?: number; avg?: number; notes?: string }): Promise<HrvRecord> {
+    return request(`/hrv/${id}`, { method: 'PUT', body: JSON.stringify(data) });
+  },
+
+  deleteHrvRecord(id: string): Promise<void> {
+    return request(`/hrv/${id}`, { method: 'DELETE' });
   },
 };
