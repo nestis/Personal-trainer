@@ -24,6 +24,11 @@ export class PersonalTrainerMCP extends McpAgent<Env, Record<string, never>, Pro
 }
 
 // HMAC helpers for integrity-protecting the OAuth state round-trip
+function getHmacSecret(env: Env): string {
+  // COOKIE_ENCRYPTION_KEY is preferred; fall back to API_PASSWORD
+  return env.COOKIE_ENCRYPTION_KEY || env.API_PASSWORD;
+}
+
 async function hmacSign(data: string, secret: string): Promise<string> {
   const enc = new TextEncoder();
   const key = await crypto.subtle.importKey(
@@ -56,7 +61,7 @@ const AuthHandler = {
 
       // Encode OAuth request info as base64 + HMAC to prevent tampering
       const payload = btoa(JSON.stringify(oauthReqInfo));
-      const signature = await hmacSign(payload, env.COOKIE_ENCRYPTION_KEY);
+      const signature = await hmacSign(payload, getHmacSecret(env));
       const stateParam = `${payload}.${signature}`;
       return new Response(loginPage(stateParam), {
         headers: { "Content-Type": "text/html" },
@@ -84,7 +89,7 @@ const AuthHandler = {
       const payload = stateParam.slice(0, dotIdx);
       const signature = stateParam.slice(dotIdx + 1);
 
-      if (!await hmacVerify(payload, signature, env.COOKIE_ENCRYPTION_KEY)) {
+      if (!await hmacVerify(payload, signature, getHmacSecret(env))) {
         return new Response("Tampered state", { status: 400 });
       }
 
