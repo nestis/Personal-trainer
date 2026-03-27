@@ -142,6 +142,10 @@ export async function getAggregatedStrength(userId: string): Promise<AggregatedE
     entries: { date: string; reps: number; kilos: number; estimated1RM: number }[];
   }>();
 
+  // Collect best set per exercise per session date (highest estimated 1RM wins)
+  // e.g. 5x60, 5x70, 5x80 → keep 5x80; 5x60, 3x80 → keep whichever has higher 1RM
+  const sessionBests = new Map<string, Map<string, { date: string; reps: number; kilos: number; estimated1RM: number }>>();
+
   for (const session of completedSessions) {
     for (const exercise of session.strength) {
       if (!exercise.name) continue;
@@ -150,17 +154,33 @@ export async function getAggregatedStrength(userId: string): Promise<AggregatedE
       if (!exerciseMap.has(normalizedName)) {
         exerciseMap.set(normalizedName, { displayName: exercise.name.trim(), entries: [] });
       }
-      const group = exerciseMap.get(normalizedName)!;
+
+      if (!sessionBests.has(normalizedName)) {
+        sessionBests.set(normalizedName, new Map());
+      }
+      const dayMap = sessionBests.get(normalizedName)!;
 
       for (const set of exercise.sets) {
         if (!set.completed || set.kilos <= 0) continue;
-        group.entries.push({
-          date: session.date,
-          reps: set.reps,
-          kilos: set.kilos,
-          estimated1RM: estimate1RM(set.kilos, set.reps),
-        });
+        const est = estimate1RM(set.kilos, set.reps);
+        const existing = dayMap.get(session.date);
+        if (!existing || est > existing.estimated1RM) {
+          dayMap.set(session.date, {
+            date: session.date,
+            reps: set.reps,
+            kilos: set.kilos,
+            estimated1RM: est,
+          });
+        }
       }
+    }
+  }
+
+  // Add the best-per-day session entries
+  for (const [normalizedName, dayMap] of sessionBests) {
+    const group = exerciseMap.get(normalizedName)!;
+    for (const entry of dayMap.values()) {
+      group.entries.push(entry);
     }
   }
 
