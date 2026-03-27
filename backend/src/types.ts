@@ -102,6 +102,14 @@ export interface ManualWodRecord {
 
 export type ManualRecord = ManualStrengthPR | ManualWodRecord;
 
+// Aggregated strength data (combines session + manual records)
+export interface AggregatedExercise {
+  exercise: string;
+  estimated1RM: number;
+  bestSet: { reps: number; kilos: number; date: string };
+  history: { date: string; estimated1RM: number; reps: number; kilos: number }[];
+}
+
 // HRV (Heart Rate Variability) daily measurements
 export interface HrvRecord {
   id: string;

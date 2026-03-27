@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
-import { StrengthPR, WodRecord, ManualStrengthPR, ManualWodRecord, ManualRecord } from '../types';
+import { AggregatedExercise, WodRecord, ManualWodRecord, ManualRecord } from '../types';
 import { api } from '../services/api';
 import { formatTime, parseTime, formatDate } from '../utils/format';
 import Spinner from '../components/Spinner';
@@ -64,14 +64,10 @@ const s: Record<string, React.CSSProperties> = {
     marginBottom: 8,
     paddingLeft: 4,
   },
-  group: {
-    marginBottom: 12,
-    overflow: 'hidden',
-  },
-  manualGroup: {
-    marginBottom: 12,
-    overflow: 'hidden',
-    borderLeft: '3px solid var(--indigo)',
+  exerciseCard: {
+    marginBottom: 10,
+    cursor: 'pointer',
+    transition: 'transform 0.15s ease',
   },
   exerciseName: {
     fontSize: 17,
@@ -83,38 +79,105 @@ const s: Record<string, React.CSSProperties> = {
     fontSize: 13,
     color: 'var(--tint)',
     fontWeight: 500,
-    marginBottom: 12,
+    marginBottom: 4,
   },
-  prRow: {
-    display: 'grid',
-    gridTemplateColumns: '52px 1fr 80px',
-    gap: 8,
-    alignItems: 'center',
-    padding: '10px 0',
-  },
-  prRowDel: {
-    display: 'grid',
-    gridTemplateColumns: '52px 1fr 72px 28px',
-    gap: 8,
-    alignItems: 'center',
-    padding: '10px 0',
-  },
-  reps: {
-    fontSize: 15,
+  bestSet: {
+    fontSize: 14,
     color: 'var(--text-secondary)',
+  },
+  chevron: {
+    fontSize: 18,
+    color: 'var(--text-tertiary)',
+    marginLeft: 'auto',
+    paddingLeft: 8,
+  },
+  cardRow: {
+    display: 'flex',
+    alignItems: 'center',
+  },
+  cardContent: {
+    flex: 1,
+  },
+  // Detail view
+  backBtn: {
+    background: 'none',
+    border: 'none',
+    color: 'var(--tint)',
+    fontSize: 15,
     fontWeight: 500,
+    cursor: 'pointer',
+    padding: '4px 0',
+    marginBottom: 16,
+    display: 'flex',
+    alignItems: 'center',
+    gap: 4,
   },
-  kg: {
-    fontSize: 17,
+  detailTitle: {
+    fontSize: 22,
+    fontWeight: 700,
+    letterSpacing: -0.4,
+    marginBottom: 4,
+  },
+  detailStat: {
+    fontSize: 15,
+    color: 'var(--tint)',
     fontWeight: 600,
-    fontVariantNumeric: 'tabular-nums',
+    marginBottom: 2,
   },
-  dateSmall: {
+  detailBest: {
+    fontSize: 14,
+    color: 'var(--text-secondary)',
+    marginBottom: 20,
+  },
+  chartCard: {
+    background: 'var(--bg-grouped-secondary)',
+    borderRadius: 'var(--radius)',
+    padding: 20,
+    boxShadow: '0 1px 3px rgba(0,0,0,0.3), 0 4px 12px rgba(0,0,0,0.15)',
+    marginBottom: 20,
+  },
+  chartTitle: {
+    fontSize: 15,
+    fontWeight: 600,
+    marginBottom: 16,
+    letterSpacing: -0.2,
+    color: 'var(--text-secondary)',
+  },
+  svgContainer: { width: '100%', overflow: 'visible' },
+  historyRow: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: '10px 0',
+    fontSize: 14,
+    color: 'var(--text-secondary)',
+    borderBottom: '0.5px solid var(--separator)',
+  },
+  historyReps: {
+    fontSize: 14,
+    fontWeight: 500,
+    color: 'var(--text-secondary)',
+    minWidth: 60,
+  },
+  historyKg: {
+    fontSize: 15,
+    fontWeight: 600,
+    color: 'var(--text-primary)',
+    flex: 1,
+  },
+  historyDate: {
     fontSize: 13,
     color: 'var(--text-tertiary)',
     textAlign: 'right' as const,
-    fontVariantNumeric: 'tabular-nums',
   },
+  history1rm: {
+    fontSize: 12,
+    color: 'var(--tint)',
+    fontWeight: 500,
+    minWidth: 70,
+    textAlign: 'right' as const,
+  },
+  // WOD styles
   wodCard: {
     marginBottom: 12,
   },
@@ -230,17 +293,6 @@ const s: Record<string, React.CSSProperties> = {
   },
 };
 
-function groupByExercise<T extends { exercise: string }>(items: T[]): Map<string, T[]> {
-  const map = new Map<string, T[]>();
-  for (const item of items) {
-    const key = item.exercise.toLowerCase();
-    const existing = map.get(key) || [];
-    existing.push(item);
-    map.set(key, existing);
-  }
-  return map;
-}
-
 interface StrengthFormState {
   exercise: string;
   reps: string;
@@ -260,11 +312,79 @@ interface WodFormState {
   notes: string;
 }
 
+function ExerciseChart({ exercise }: { exercise: AggregatedExercise }) {
+  const { history } = exercise;
+  if (history.length < 2) return null;
+
+  const allVals = history.map(h => h.estimated1RM);
+  const minVal = Math.max(0, Math.min(...allVals) - 5);
+  const maxVal = Math.max(...allVals) + 5;
+  const range = maxVal - minVal || 1;
+
+  const W = 500;
+  const H = 200;
+  const PAD_L = 40;
+  const PAD_R = 10;
+  const PAD_T = 10;
+  const PAD_B = 30;
+  const chartW = W - PAD_L - PAD_R;
+  const chartH = H - PAD_T - PAD_B;
+
+  const xStep = history.length > 1 ? chartW / (history.length - 1) : chartW / 2;
+
+  function toX(i: number): number {
+    return PAD_L + (history.length > 1 ? i * xStep : chartW / 2);
+  }
+  function toY(v: number): number {
+    return PAD_T + chartH - ((v - minVal) / range) * chartH;
+  }
+
+  const path = history
+    .map((h, i) => `${i === 0 ? 'M' : 'L'}${toX(i).toFixed(1)},${toY(h.estimated1RM).toFixed(1)}`)
+    .join(' ');
+
+  const areaPath = `${path} L${toX(history.length - 1)},${toY(minVal)} L${toX(0)},${toY(minVal)} Z`;
+
+  // Y-axis ticks
+  const tickCount = 5;
+  const ticks = Array.from({ length: tickCount }, (_, i) => minVal + (range * i) / (tickCount - 1));
+
+  return (
+    <div style={s.chartCard}>
+      <div style={s.chartTitle}>Estimated 1RM Over Time</div>
+      <svg viewBox={`0 0 ${W} ${H}`} style={s.svgContainer}>
+        {/* Grid lines */}
+        {ticks.map((v, i) => (
+          <g key={i}>
+            <line x1={PAD_L} x2={W - PAD_R} y1={toY(v)} y2={toY(v)} stroke="rgba(120,120,128,0.15)" strokeWidth="0.5" />
+            <text x={PAD_L - 4} y={toY(v) + 4} textAnchor="end" fill="rgba(235,235,245,0.4)" fontSize="10">{Math.round(v)}</text>
+          </g>
+        ))}
+        {/* X-axis labels */}
+        {history.map((h, i) => {
+          if (history.length > 10 && i % Math.ceil(history.length / 8) !== 0 && i !== history.length - 1) return null;
+          const d = new Date(h.date + 'T00:00:00');
+          const label = `${d.getDate()}/${d.getMonth() + 1}`;
+          return <text key={i} x={toX(i)} y={H - 4} textAnchor="middle" fill="rgba(235,235,245,0.4)" fontSize="10">{label}</text>;
+        })}
+        {/* Area fill */}
+        <path d={areaPath} fill="rgba(10,132,255,0.08)" />
+        {/* Line */}
+        <path d={path} fill="none" stroke="var(--tint)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+        {/* Dots */}
+        {history.map((h, i) => (
+          <circle key={i} cx={toX(i)} cy={toY(h.estimated1RM)} r="3.5" fill="var(--tint)" />
+        ))}
+      </svg>
+    </div>
+  );
+}
+
 function Records() {
   const today = new Date().toISOString().split('T')[0];
 
   const [tab, setTab] = useState<'strength' | 'wods'>('strength');
-  const [strengthPRs, setStrengthPRs] = useState<StrengthPR[]>([]);
+  const [aggregated, setAggregated] = useState<AggregatedExercise[]>([]);
   const [wodRecords, setWodRecords] = useState<WodRecord[]>([]);
   const [manualRecords, setManualRecords] = useState<ManualRecord[]>([]);
   const [loading, setLoading] = useState(true);
@@ -274,6 +394,7 @@ function Records() {
   const [editingWodId, setEditingWodId] = useState<string | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [confirmDeleteName, setConfirmDeleteName] = useState('');
+  const [selectedExercise, setSelectedExercise] = useState<AggregatedExercise | null>(null);
 
   const [strengthForm, setStrengthForm] = useState<StrengthFormState>({ exercise: '', reps: '', kilos: '', date: today, notes: '' });
   const [wodForm, setWodForm] = useState<WodFormState>({ name: '', desc: '', time: '', reps: '', date: today, avgHR: '', maxHR: '', notes: '' });
@@ -288,9 +409,9 @@ function Records() {
   const loadData = useCallback(() => {
     setLoading(true);
     setError(null);
-    Promise.all([api.getStrengthPRs(), api.getWodRecords(), api.listManualRecords()])
-      .then(([prs, wods, manual]) => {
-        setStrengthPRs(prs);
+    Promise.all([api.getAggregatedStrength(), api.getWodRecords(), api.listManualRecords()])
+      .then(([agg, wods, manual]) => {
+        setAggregated(agg);
         setWodRecords(wods);
         setManualRecords(manual);
       })
@@ -301,10 +422,18 @@ function Records() {
       .finally(() => setLoading(false));
   }, []);
 
-  const reloadManualRecords = () => {
-    api.listManualRecords()
-      .then(setManualRecords)
-      .catch((err) => console.error('Failed to reload manual records:', err));
+  const reloadData = () => {
+    Promise.all([api.getAggregatedStrength(), api.listManualRecords()])
+      .then(([agg, manual]) => {
+        setAggregated(agg);
+        setManualRecords(manual);
+        // Update selected exercise if it's open
+        if (selectedExercise) {
+          const updated = agg.find(e => e.exercise.toLowerCase() === selectedExercise.exercise.toLowerCase());
+          setSelectedExercise(updated || null);
+        }
+      })
+      .catch((err) => console.error('Failed to reload records:', err));
   };
 
   useEffect(() => { loadData(); }, [loadData]);
@@ -320,7 +449,7 @@ function Records() {
       setStrengthForm({ exercise: '', reps: '', kilos: '', date: today, notes: '' });
       setShowStrengthForm(false);
       showToast('Strength PR added!');
-      reloadManualRecords();
+      reloadData();
     } catch (err) {
       console.error('Failed to add strength PR:', err);
       showToast('Failed to add strength PR.', 'error');
@@ -350,7 +479,7 @@ function Records() {
       }
       setWodForm({ name: '', desc: '', time: '', reps: '', date: today, avgHR: '', maxHR: '', notes: '' });
       setShowWodForm(false);
-      reloadManualRecords();
+      api.listManualRecords().then(setManualRecords).catch(() => {});
     } catch (err) {
       console.error('Failed to save WOD record:', err);
       showToast('Failed to save WOD record.', 'error');
@@ -377,7 +506,7 @@ function Records() {
       await api.deleteManualRecord(id);
       setConfirmDeleteId(null);
       showToast('Record deleted.');
-      reloadManualRecords();
+      reloadData();
     } catch (err) {
       console.error('Failed to delete record:', err);
       showToast('Failed to delete record.', 'error');
@@ -407,10 +536,43 @@ function Records() {
     );
   }
 
-  const grouped = groupByExercise(strengthPRs);
-  const manualStrength = manualRecords.filter((r): r is ManualStrengthPR => r.type === 'strength');
   const manualWods = manualRecords.filter((r): r is ManualWodRecord => r.type === 'wod');
-  const manualStrengthGrouped = groupByExercise(manualStrength);
+
+  // Exercise detail view
+  if (selectedExercise) {
+    const reversedHistory = [...selectedExercise.history].reverse();
+    return (
+      <div style={s.page} className="fade-in">
+        <button style={s.backBtn} onClick={() => setSelectedExercise(null)}>
+          &#8249; Records
+        </button>
+        <div style={s.detailTitle}>{selectedExercise.exercise}</div>
+        <div style={s.detailStat}>Est. 1RM {selectedExercise.estimated1RM} kg</div>
+        <div style={s.detailBest}>
+          {selectedExercise.bestSet.reps} rep{selectedExercise.bestSet.reps !== 1 ? 's' : ''} {selectedExercise.bestSet.kilos} kg — {formatDate(selectedExercise.bestSet.date)}
+        </div>
+
+        <ExerciseChart exercise={selectedExercise} />
+
+        <div style={s.sectionLabel}>All Entries</div>
+        <div className="card" style={{ overflow: 'hidden' }}>
+          {reversedHistory.map((h, i) => (
+            <div key={i} style={{
+              ...s.historyRow,
+              ...(i === reversedHistory.length - 1 ? { borderBottom: 'none' } : {}),
+            }}>
+              <span style={s.historyReps}>{h.reps} rep{h.reps !== 1 ? 's' : ''}</span>
+              <span style={s.historyKg}>{h.kilos} kg</span>
+              <span style={s.history1rm}>1RM {h.estimated1RM}</span>
+              <span style={s.historyDate}>{formatDate(h.date)}</span>
+            </div>
+          ))}
+        </div>
+
+        <Toast toast={toast} onDismiss={dismissToast} />
+      </div>
+    );
+  }
 
   return (
     <div style={s.page} className="fade-in">
@@ -429,62 +591,31 @@ function Records() {
         </button>
       </div>
 
-      {/* STRENGTH */}
+      {/* STRENGTH — Aggregated by exercise */}
       {tab === 'strength' && (
         <>
-          {strengthPRs.length > 0 && (
-            <>
-              <div style={s.firstSectionLabel}>From Sessions</div>
-              {Array.from(grouped.entries()).map(([key, prs]) => {
-                const best1RM = Math.max(...prs.map((p) => p.estimated1RM));
-                return (
-                  <div key={key} className="card" style={s.group}>
-                    <div style={s.exerciseName}>{prs[0].exercise}</div>
-                    <div style={s.est1rm}>Est. 1RM: {best1RM} kg</div>
-                    {prs.map((pr, i) => (
-                      <div key={i}>
-                        {i > 0 && <div style={{ height: '0.5px', background: 'var(--separator)' }} />}
-                        <div style={s.prRow}>
-                          <span style={s.reps}>{pr.reps} rep{pr.reps !== 1 ? 's' : ''}</span>
-                          <span style={s.kg}>{pr.kilos} kg</span>
-                          <span style={s.dateSmall}>{formatDate(pr.date)}</span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                );
-              })}
-            </>
-          )}
-
-          <div style={strengthPRs.length > 0 ? s.sectionLabel : s.firstSectionLabel}>Manual PRs</div>
-
-          {manualStrength.length > 0 ? (
-            Array.from(manualStrengthGrouped.entries()).map(([key, records]) => {
-              const best1RM = Math.max(...records.map((r) => r.estimated1RM));
-              return (
-                <div key={key} className="card" style={s.manualGroup}>
-                  <div style={s.exerciseName}>{records[0].exercise}</div>
-                  <div style={s.est1rm}>Est. 1RM: {best1RM} kg</div>
-                  {records.map((r, i) => (
-                    <div key={r.id}>
-                      {i > 0 && <div style={{ height: '0.5px', background: 'var(--separator)' }} />}
-                      <div style={s.prRowDel}>
-                        <span style={s.reps}>{r.reps} rep{r.reps !== 1 ? 's' : ''}</span>
-                        <span>
-                          <span style={s.kg}>{r.kilos} kg</span>
-                          {r.notes && <div style={s.note}>{r.notes}</div>}
-                        </span>
-                        <span style={s.dateSmall}>{formatDate(r.date)}</span>
-                        <button style={s.delBtn} onClick={() => askDeleteManual(r.id, r.exercise)} aria-label="Delete record">-</button>
-                      </div>
+          {aggregated.length > 0 ? (
+            aggregated.map((ex) => (
+              <div
+                key={ex.exercise.toLowerCase()}
+                className="card"
+                style={s.exerciseCard}
+                onClick={() => setSelectedExercise(ex)}
+              >
+                <div style={s.cardRow}>
+                  <div style={s.cardContent}>
+                    <div style={s.exerciseName}>{ex.exercise}</div>
+                    <div style={s.est1rm}>Est. 1RM {ex.estimated1RM} kg</div>
+                    <div style={s.bestSet}>
+                      {ex.bestSet.reps} rep{ex.bestSet.reps !== 1 ? 's' : ''} {ex.bestSet.kilos} kg — {formatDate(ex.bestSet.date)}
                     </div>
-                  ))}
+                  </div>
+                  <span style={s.chevron}>&#8250;</span>
                 </div>
-              );
-            })
+              </div>
+            ))
           ) : !showStrengthForm ? (
-            <div style={s.empty}>No manual PRs yet</div>
+            <div style={s.empty}>No strength records yet</div>
           ) : null}
 
           {showStrengthForm ? (

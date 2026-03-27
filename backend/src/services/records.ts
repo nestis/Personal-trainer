@@ -1,5 +1,6 @@
-import { Session, StrengthPR, WodRecord } from '../types';
+import { Session, StrengthPR, WodRecord, AggregatedExercise, ManualStrengthPR } from '../types';
 import { listSessions } from './dynamodb';
+import { listManualRecords } from './manualRecords';
 import { estimate1RM } from '../utils/formulas';
 
 export async function getAllRecords(
@@ -124,4 +125,82 @@ export async function getStrengthPRs(userId: string, prefetchedSessions?: Sessio
 export async function getWodRecords(userId: string, prefetchedSessions?: Session[]): Promise<WodRecord[]> {
   const { wodRecords } = await getAllRecords(userId, prefetchedSessions);
   return wodRecords;
+}
+
+export async function getAggregatedStrength(userId: string): Promise<AggregatedExercise[]> {
+  const [sessions, manualRecords] = await Promise.all([
+    listSessions(userId),
+    listManualRecords(userId, 'strength'),
+  ]);
+
+  const completedSessions = sessions.filter((s) => s.status === 'completed');
+  const manualStrength = manualRecords.filter((r): r is ManualStrengthPR => r.type === 'strength');
+
+  // Collect all entries per exercise (normalized name)
+  const exerciseMap = new Map<string, {
+    displayName: string;
+    entries: { date: string; reps: number; kilos: number; estimated1RM: number }[];
+  }>();
+
+  for (const session of completedSessions) {
+    for (const exercise of session.strength) {
+      if (!exercise.name) continue;
+      const normalizedName = exercise.name.trim().toLowerCase();
+
+      if (!exerciseMap.has(normalizedName)) {
+        exerciseMap.set(normalizedName, { displayName: exercise.name.trim(), entries: [] });
+      }
+      const group = exerciseMap.get(normalizedName)!;
+
+      for (const set of exercise.sets) {
+        if (!set.completed || set.kilos <= 0) continue;
+        group.entries.push({
+          date: session.date,
+          reps: set.reps,
+          kilos: set.kilos,
+          estimated1RM: estimate1RM(set.kilos, set.reps),
+        });
+      }
+    }
+  }
+
+  for (const manual of manualStrength) {
+    const normalizedName = manual.exercise.trim().toLowerCase();
+
+    if (!exerciseMap.has(normalizedName)) {
+      exerciseMap.set(normalizedName, { displayName: manual.exercise.trim(), entries: [] });
+    }
+    const group = exerciseMap.get(normalizedName)!;
+
+    group.entries.push({
+      date: manual.date,
+      reps: manual.reps,
+      kilos: manual.kilos,
+      estimated1RM: manual.estimated1RM,
+    });
+  }
+
+  const result: AggregatedExercise[] = [];
+
+  for (const { displayName, entries } of exerciseMap.values()) {
+    if (entries.length === 0) continue;
+
+    // Best entry by estimated 1RM
+    const best = entries.reduce((a, b) => a.estimated1RM >= b.estimated1RM ? a : b);
+
+    // Sort history by date ascending
+    const history = [...entries].sort((a, b) => a.date.localeCompare(b.date));
+
+    result.push({
+      exercise: displayName,
+      estimated1RM: best.estimated1RM,
+      bestSet: { reps: best.reps, kilos: best.kilos, date: best.date },
+      history,
+    });
+  }
+
+  // Sort by exercise name
+  result.sort((a, b) => a.exercise.toLowerCase().localeCompare(b.exercise.toLowerCase()));
+
+  return result;
 }

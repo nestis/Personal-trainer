@@ -1,4 +1,4 @@
-import { Session, StrengthPR, WodRecord, ManualRecord, ManualStrengthPR, ManualWodRecord, HrvRecord } from '../types';
+import { Session, StrengthPR, WodRecord, ManualRecord, ManualStrengthPR, ManualWodRecord, HrvRecord, AggregatedExercise } from '../types';
 
 const API_BASE = import.meta.env.VITE_API_URL || '/api';
 
@@ -93,6 +93,10 @@ export const api = {
 
   getStrengthPRs(): Promise<StrengthPR[]> {
     return request('/records/strength');
+  },
+
+  getAggregatedStrength(): Promise<AggregatedExercise[]> {
+    return request('/records/strength/aggregated');
   },
 
   getWodRecords(): Promise<WodRecord[]> {
