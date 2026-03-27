@@ -12,22 +12,17 @@ import { useToast } from '../hooks/useToast';
 
 const s: Record<string, React.CSSProperties> = {
   page: {
-    paddingTop: 20,
-    paddingBottom: 40,
+    paddingTop: 12,
+    paddingBottom: 80,
   },
   header: {
     marginBottom: 28,
-  },
-  dateRow: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: 12,
-    marginBottom: 4,
   },
   date: {
     fontSize: 28,
     fontWeight: 700,
     letterSpacing: -0.6,
+    marginBottom: 8,
   },
   section: {
     marginBottom: 28,
@@ -46,14 +41,20 @@ const s: Record<string, React.CSSProperties> = {
     color: 'var(--text-secondary)',
     lineHeight: 1.5,
     whiteSpace: 'pre-wrap' as const,
-    padding: '12px 16px',
+    padding: '14px 16px',
     background: 'var(--bg-grouped-secondary)',
     borderRadius: 'var(--radius)',
+    boxShadow: 'var(--shadow-card)',
   },
   actions: {
     display: 'flex',
+    flexDirection: 'column' as const,
     gap: 10,
     marginTop: 32,
+  },
+  actionRow: {
+    display: 'flex',
+    gap: 10,
   },
 };
 
@@ -144,9 +145,7 @@ function SessionDetail() {
   return (
     <div style={s.page} className="fade-in">
       <div style={s.header}>
-        <div style={s.dateRow}>
-          <span style={s.date}>{formatDate(session.date)}</span>
-        </div>
+        <div style={s.date}>{formatDate(session.date)}</div>
         <span className={`badge badge-${session.status}`}>{session.status}</span>
       </div>
 
@@ -170,28 +169,29 @@ function SessionDetail() {
       <div style={s.actions}>
         {session.status === 'planned' && (
           <button
-            className="btn btn-primary"
+            className="btn btn-primary btn-block"
             onClick={handleMarkCompleted}
             disabled={saving}
-            style={{ flex: 1 }}
           >
-            {saving ? 'Saving...' : 'Complete'}
+            {saving ? 'Saving...' : 'Mark as Completed'}
           </button>
         )}
-        <Link
-          to={`/session/${session.id}/edit`}
-          className="btn btn-secondary"
-          style={{ flex: 1, textAlign: 'center' }}
-        >
-          Edit
-        </Link>
-        <button
-          className="btn btn-danger"
-          onClick={() => setConfirmDelete(true)}
-          style={{ flex: 1 }}
-        >
-          Delete
-        </button>
+        <div style={s.actionRow}>
+          <Link
+            to={`/session/${session.id}/edit`}
+            className="btn btn-secondary"
+            style={{ flex: 1, textAlign: 'center' }}
+          >
+            Edit
+          </Link>
+          <button
+            className="btn btn-danger"
+            onClick={() => setConfirmDelete(true)}
+            style={{ flex: 1 }}
+          >
+            Delete
+          </button>
+        </div>
       </div>
 
       {confirmDelete && (

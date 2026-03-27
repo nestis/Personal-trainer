@@ -12,12 +12,12 @@ const s: Record<string, React.CSSProperties> = {
     inset: 0,
     zIndex: 900,
     background: 'rgba(0, 0, 0, 0.6)',
-    backdropFilter: 'blur(4px)',
-    WebkitBackdropFilter: 'blur(4px)',
+    backdropFilter: 'blur(8px)',
+    WebkitBackdropFilter: 'blur(8px)',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 20,
+    padding: 24,
   },
   dialog: {
     width: '100%',
@@ -26,7 +26,7 @@ const s: Record<string, React.CSSProperties> = {
     borderRadius: 'var(--radius)',
     padding: 24,
     animation: 'scaleIn 0.2s ease-out',
-    boxShadow: '0 8px 32px rgba(0, 0, 0, 0.5)',
+    boxShadow: 'var(--shadow-elevated)',
   },
   title: {
     fontSize: 17,
@@ -37,7 +37,7 @@ const s: Record<string, React.CSSProperties> = {
     fontSize: 15,
     color: 'var(--text-secondary)',
     lineHeight: 1.4,
-    marginBottom: 20,
+    marginBottom: 24,
   },
   actions: {
     display: 'flex',

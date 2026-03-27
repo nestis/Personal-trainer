@@ -8,6 +8,7 @@
   --bg-grouped-secondary: #1c1c1e;
   --fill: rgba(120, 120, 128, 0.2);
   --fill-secondary: rgba(120, 120, 128, 0.16);
+  --fill-tertiary: rgba(120, 120, 128, 0.12);
 
   --text-primary: #ffffff;
   --text-secondary: rgba(235, 235, 245, 0.6);
@@ -20,6 +21,8 @@
   --orange: #ff9f0a;
   --red: #ff453a;
   --indigo: #5e5ce6;
+  --cyan: #64d2ff;
+  --purple: #bf5af2;
 
   --separator: rgba(84, 84, 88, 0.65);
   --separator-opaque: #38383a;
@@ -28,13 +31,26 @@
   --radius: 14px;
   --radius-sm: 10px;
   --radius-xs: 8px;
+  --radius-lg: 20px;
 
   /* Glow & gradient tokens */
   --glow-blue: 0 0 20px rgba(10, 132, 255, 0.15);
   --glow-green: 0 0 16px rgba(48, 209, 88, 0.15);
   --glow-red: 0 0 16px rgba(255, 69, 58, 0.12);
   --gradient-blue: linear-gradient(135deg, #0a84ff 0%, #5e5ce6 100%);
+  --gradient-green: linear-gradient(135deg, #30d158 0%, #64d2ff 100%);
   --bg-toast: rgba(44, 44, 46, 0.95);
+
+  /* Card depth */
+  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.3), 0 4px 12px rgba(0, 0, 0, 0.15);
+  --shadow-elevated: 0 2px 8px rgba(0, 0, 0, 0.4), 0 8px 24px rgba(0, 0, 0, 0.2);
+
+  /* Safe areas */
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+
+  /* Tab bar height */
+  --tab-bar-height: 52px;
 }
 
 * {
@@ -57,6 +73,7 @@ body {
   min-height: 100dvh;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  overscroll-behavior-y: none;
 }
 
 #root {
@@ -94,7 +111,7 @@ a {
   background: var(--bg-grouped-secondary);
   border-radius: var(--radius);
   padding: 16px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3), 0 4px 12px rgba(0, 0, 0, 0.15);
+  box-shadow: var(--shadow-card);
 }
 
 /* ─── Inputs ───────────────────────────────────────────── */
@@ -329,4 +346,18 @@ input[type="checkbox"]:checked {
 @keyframes scaleIn {
   from { opacity: 0; transform: scale(0.95); }
   to { opacity: 1; transform: scale(1); }
+}
+
+/* ─── Page title (large title style) ───────────────────── */
+.page-title {
+  font-size: 34px;
+  font-weight: 700;
+  letter-spacing: -0.7px;
+  margin-bottom: 20px;
+  line-height: 1.1;
+}
+
+/* ─── Tab bar safe area padding ────────────────────────── */
+.tab-bar-padding {
+  padding-bottom: calc(var(--tab-bar-height) + var(--safe-bottom) + 16px);
 }

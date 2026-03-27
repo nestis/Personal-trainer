@@ -10,8 +10,8 @@ import { useToast } from '../hooks/useToast';
 
 const s: Record<string, React.CSSProperties> = {
   page: {
-    paddingTop: 20,
-    paddingBottom: 40,
+    paddingTop: 12,
+    paddingBottom: 80,
   },
   section: {
     marginBottom: 28,

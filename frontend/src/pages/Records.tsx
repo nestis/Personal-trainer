@@ -9,8 +9,15 @@ import { useToast } from '../hooks/useToast';
 
 const s: Record<string, React.CSSProperties> = {
   page: {
-    paddingTop: 20,
-    paddingBottom: 40,
+    paddingTop: 8,
+    paddingBottom: 80,
+  },
+  title: {
+    fontSize: 34,
+    fontWeight: 700,
+    letterSpacing: -0.7,
+    marginBottom: 20,
+    lineHeight: 1.1,
   },
   segmented: {
     display: 'flex',
@@ -31,6 +38,7 @@ const s: Record<string, React.CSSProperties> = {
     cursor: 'pointer',
     borderRadius: 7,
     transition: 'all 0.2s ease',
+    minHeight: 36,
   },
   segActive: {
     flex: 1,
@@ -44,6 +52,7 @@ const s: Record<string, React.CSSProperties> = {
     borderRadius: 7,
     boxShadow: '0 1px 4px rgba(0,0,0,0.3)',
     transition: 'all 0.2s ease',
+    minHeight: 36,
   },
   sectionLabel: {
     fontSize: 13,
@@ -64,32 +73,12 @@ const s: Record<string, React.CSSProperties> = {
     marginBottom: 8,
     paddingLeft: 4,
   },
+  // Exercise cards
   exerciseCard: {
     marginBottom: 10,
     cursor: 'pointer',
-    transition: 'transform 0.15s ease',
-  },
-  exerciseName: {
-    fontSize: 17,
-    fontWeight: 600,
-    letterSpacing: -0.2,
-    marginBottom: 2,
-  },
-  est1rm: {
-    fontSize: 13,
-    color: 'var(--tint)',
-    fontWeight: 500,
-    marginBottom: 4,
-  },
-  bestSet: {
-    fontSize: 14,
-    color: 'var(--text-secondary)',
-  },
-  chevron: {
-    fontSize: 18,
-    color: 'var(--text-tertiary)',
-    marginLeft: 'auto',
-    paddingLeft: 8,
+    transition: 'transform 0.1s ease',
+    WebkitTapHighlightColor: 'transparent',
   },
   cardRow: {
     display: 'flex',
@@ -97,43 +86,89 @@ const s: Record<string, React.CSSProperties> = {
   },
   cardContent: {
     flex: 1,
+    minWidth: 0,
+  },
+  exerciseName: {
+    fontSize: 17,
+    fontWeight: 600,
+    letterSpacing: -0.2,
+    marginBottom: 4,
+  },
+  est1rm: {
+    fontSize: 14,
+    color: 'var(--tint)',
+    fontWeight: 600,
+    marginBottom: 4,
+  },
+  bestSet: {
+    fontSize: 14,
+    color: 'var(--text-secondary)',
+  },
+  chevron: {
+    color: 'var(--text-tertiary)',
+    flexShrink: 0,
+    marginLeft: 8,
   },
   // Detail view
   backBtn: {
     background: 'none',
     border: 'none',
     color: 'var(--tint)',
-    fontSize: 15,
-    fontWeight: 500,
+    fontSize: 17,
+    fontWeight: 400,
     cursor: 'pointer',
     padding: '4px 0',
-    marginBottom: 16,
+    marginBottom: 12,
     display: 'flex',
     alignItems: 'center',
     gap: 4,
+    minHeight: 44,
   },
   detailTitle: {
-    fontSize: 22,
+    fontSize: 28,
     fontWeight: 700,
-    letterSpacing: -0.4,
+    letterSpacing: -0.6,
+    marginBottom: 16,
+  },
+  highlightCard: {
+    background: 'linear-gradient(135deg, rgba(10,132,255,0.15) 0%, rgba(94,92,230,0.1) 100%)',
+    borderRadius: 'var(--radius)',
+    padding: 20,
+    marginBottom: 20,
+    textAlign: 'center' as const,
+    boxShadow: '0 0 20px rgba(10,132,255,0.08)',
+  },
+  highlightLabel: {
+    fontSize: 13,
+    fontWeight: 400,
+    color: 'var(--text-secondary)',
+    textTransform: 'uppercase' as const,
+    letterSpacing: 0.5,
     marginBottom: 4,
   },
-  detailStat: {
-    fontSize: 15,
+  highlightValue: {
+    fontSize: 40,
+    fontWeight: 700,
     color: 'var(--tint)',
-    fontWeight: 600,
-    marginBottom: 2,
+    letterSpacing: -1,
+    fontVariantNumeric: 'tabular-nums',
   },
-  detailBest: {
+  highlightUnit: {
+    fontSize: 15,
+    fontWeight: 500,
+    color: 'var(--text-secondary)',
+    marginTop: 2,
+  },
+  highlightSub: {
     fontSize: 14,
     color: 'var(--text-secondary)',
-    marginBottom: 20,
+    marginTop: 8,
   },
   chartCard: {
     background: 'var(--bg-grouped-secondary)',
     borderRadius: 'var(--radius)',
     padding: 20,
-    boxShadow: '0 1px 3px rgba(0,0,0,0.3), 0 4px 12px rgba(0,0,0,0.15)',
+    boxShadow: 'var(--shadow-card)',
     marginBottom: 20,
   },
   chartTitle: {
@@ -145,37 +180,35 @@ const s: Record<string, React.CSSProperties> = {
   },
   svgContainer: { width: '100%', overflow: 'visible' },
   historyRow: {
-    display: 'flex',
-    justifyContent: 'space-between',
+    display: 'grid',
+    gridTemplateColumns: '60px 1fr 70px 64px',
+    gap: 8,
     alignItems: 'center',
-    padding: '10px 0',
-    fontSize: 14,
-    color: 'var(--text-secondary)',
+    padding: '12px 0',
     borderBottom: '0.5px solid var(--separator)',
   },
   historyReps: {
     fontSize: 14,
     fontWeight: 500,
     color: 'var(--text-secondary)',
-    minWidth: 60,
   },
   historyKg: {
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: 600,
     color: 'var(--text-primary)',
-    flex: 1,
+  },
+  history1rm: {
+    fontSize: 13,
+    color: 'var(--tint)',
+    fontWeight: 500,
+    textAlign: 'right' as const,
+    fontVariantNumeric: 'tabular-nums',
   },
   historyDate: {
     fontSize: 13,
     color: 'var(--text-tertiary)',
     textAlign: 'right' as const,
-  },
-  history1rm: {
-    fontSize: 12,
-    color: 'var(--tint)',
-    fontWeight: 500,
-    minWidth: 70,
-    textAlign: 'right' as const,
+    fontVariantNumeric: 'tabular-nums',
   },
   // WOD styles
   wodCard: {
@@ -261,10 +294,15 @@ const s: Record<string, React.CSSProperties> = {
     color: 'var(--red)',
     cursor: 'pointer',
     fontSize: 17,
-    padding: 0,
+    padding: 4,
     lineHeight: 1,
     opacity: 0.7,
     transition: 'opacity 0.15s',
+    minWidth: 44,
+    minHeight: 44,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   addBtn: {
     background: 'none',
@@ -278,10 +316,11 @@ const s: Record<string, React.CSSProperties> = {
     textAlign: 'center' as const,
     borderRadius: 'var(--radius)',
     transition: 'background 0.15s',
+    minHeight: 48,
   },
   empty: {
     textAlign: 'center' as const,
-    padding: '24px 20px',
+    padding: '32px 20px',
     color: 'var(--text-tertiary)',
     fontSize: 15,
   },
@@ -345,7 +384,6 @@ function ExerciseChart({ exercise }: { exercise: AggregatedExercise }) {
 
   const areaPath = `${path} L${toX(history.length - 1)},${toY(minVal)} L${toX(0)},${toY(minVal)} Z`;
 
-  // Y-axis ticks
   const tickCount = 5;
   const ticks = Array.from({ length: tickCount }, (_, i) => minVal + (range * i) / (tickCount - 1));
 
@@ -353,25 +391,20 @@ function ExerciseChart({ exercise }: { exercise: AggregatedExercise }) {
     <div style={s.chartCard}>
       <div style={s.chartTitle}>Estimated 1RM Over Time</div>
       <svg viewBox={`0 0 ${W} ${H}`} style={s.svgContainer}>
-        {/* Grid lines */}
         {ticks.map((v, i) => (
           <g key={i}>
             <line x1={PAD_L} x2={W - PAD_R} y1={toY(v)} y2={toY(v)} stroke="rgba(120,120,128,0.15)" strokeWidth="0.5" />
             <text x={PAD_L - 4} y={toY(v) + 4} textAnchor="end" fill="rgba(235,235,245,0.4)" fontSize="10">{Math.round(v)}</text>
           </g>
         ))}
-        {/* X-axis labels */}
         {history.map((h, i) => {
           if (history.length > 10 && i % Math.ceil(history.length / 8) !== 0 && i !== history.length - 1) return null;
           const d = new Date(h.date + 'T00:00:00');
           const label = `${d.getDate()}/${d.getMonth() + 1}`;
           return <text key={i} x={toX(i)} y={H - 4} textAnchor="middle" fill="rgba(235,235,245,0.4)" fontSize="10">{label}</text>;
         })}
-        {/* Area fill */}
         <path d={areaPath} fill="rgba(10,132,255,0.08)" />
-        {/* Line */}
         <path d={path} fill="none" stroke="var(--tint)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-        {/* Dots */}
         {history.map((h, i) => (
           <circle key={i} cx={toX(i)} cy={toY(h.estimated1RM)} r="3.5" fill="var(--tint)" />
         ))}
@@ -427,7 +460,6 @@ function Records() {
       .then(([agg, manual]) => {
         setAggregated(agg);
         setManualRecords(manual);
-        // Update selected exercise if it's open
         if (selectedExercise) {
           const updated = agg.find(e => e.exercise.toLowerCase() === selectedExercise.exercise.toLowerCase());
           setSelectedExercise(updated || null);
@@ -488,8 +520,7 @@ function Records() {
 
   const startEditWod = (r: ManualWodRecord) => {
     setWodForm({
-      name: r.name,
-      desc: r.description || '',
+      name: r.name, desc: r.description || '',
       time: r.timeSeconds ? formatTime(r.timeSeconds) : '',
       reps: r.totalReps ? String(r.totalReps) : '',
       date: r.date,
@@ -519,19 +550,13 @@ function Records() {
     setConfirmDeleteName(name);
   };
 
-  if (loading) {
-    return <Spinner />;
-  }
+  if (loading) return <Spinner />;
 
   if (error) {
     return (
       <div style={{ textAlign: 'center', padding: '80px 20px' }} className="fade-in">
-        <div className="card" style={{ background: 'rgba(255,69,58,0.12)', color: 'var(--red)' }}>
-          {error}
-        </div>
-        <button className="btn btn-primary" onClick={loadData} style={{ marginTop: 16 }}>
-          Retry
-        </button>
+        <div className="card" style={{ background: 'rgba(255,69,58,0.12)', color: 'var(--red)' }}>{error}</div>
+        <button className="btn btn-primary" onClick={loadData} style={{ marginTop: 16 }}>Retry</button>
       </div>
     );
   }
@@ -544,12 +569,21 @@ function Records() {
     return (
       <div style={s.page} className="fade-in">
         <button style={s.backBtn} onClick={() => setSelectedExercise(null)}>
-          &#8249; Records
+          <svg width="10" height="16" viewBox="0 0 10 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="8 2 2 8 8 14" />
+          </svg>
+          Records
         </button>
+
         <div style={s.detailTitle}>{selectedExercise.exercise}</div>
-        <div style={s.detailStat}>Est. 1RM {selectedExercise.estimated1RM} kg</div>
-        <div style={s.detailBest}>
-          {selectedExercise.bestSet.reps} rep{selectedExercise.bestSet.reps !== 1 ? 's' : ''} {selectedExercise.bestSet.kilos} kg — {formatDate(selectedExercise.bestSet.date)}
+
+        <div style={s.highlightCard}>
+          <div style={s.highlightLabel}>Estimated 1RM</div>
+          <div style={s.highlightValue}>{selectedExercise.estimated1RM}</div>
+          <div style={s.highlightUnit}>kg</div>
+          <div style={s.highlightSub}>
+            {selectedExercise.bestSet.reps} rep{selectedExercise.bestSet.reps !== 1 ? 's' : ''} @ {selectedExercise.bestSet.kilos} kg — {formatDate(selectedExercise.bestSet.date)}
+          </div>
         </div>
 
         <ExerciseChart exercise={selectedExercise} />
@@ -563,7 +597,7 @@ function Records() {
             }}>
               <span style={s.historyReps}>{h.reps} rep{h.reps !== 1 ? 's' : ''}</span>
               <span style={s.historyKg}>{h.kilos} kg</span>
-              <span style={s.history1rm}>1RM {h.estimated1RM}</span>
+              <span style={s.history1rm}>{h.estimated1RM} kg</span>
               <span style={s.historyDate}>{formatDate(h.date)}</span>
             </div>
           ))}
@@ -576,30 +610,26 @@ function Records() {
 
   return (
     <div style={s.page} className="fade-in">
+      <div style={s.title}>Records</div>
+
       <div style={s.segmented}>
-        <button
-          style={tab === 'strength' ? s.segActive : s.seg}
-          onClick={() => setTab('strength')}
-        >
+        <button style={tab === 'strength' ? s.segActive : s.seg} onClick={() => setTab('strength')}>
           Strength PRs
         </button>
-        <button
-          style={tab === 'wods' ? s.segActive : s.seg}
-          onClick={() => setTab('wods')}
-        >
+        <button style={tab === 'wods' ? s.segActive : s.seg} onClick={() => setTab('wods')}>
           WOD Records
         </button>
       </div>
 
-      {/* STRENGTH — Aggregated by exercise */}
+      {/* STRENGTH */}
       {tab === 'strength' && (
         <>
           {aggregated.length > 0 ? (
-            aggregated.map((ex) => (
+            aggregated.map((ex, i) => (
               <div
                 key={ex.exercise.toLowerCase()}
-                className="card"
-                style={s.exerciseCard}
+                className="card fade-in-stagger"
+                style={{ ...s.exerciseCard, '--delay': `${i * 0.04}s` } as React.CSSProperties}
                 onClick={() => setSelectedExercise(ex)}
               >
                 <div style={s.cardRow}>
@@ -610,7 +640,9 @@ function Records() {
                       {ex.bestSet.reps} rep{ex.bestSet.reps !== 1 ? 's' : ''} {ex.bestSet.kilos} kg — {formatDate(ex.bestSet.date)}
                     </div>
                   </div>
-                  <span style={s.chevron}>&#8250;</span>
+                  <svg style={s.chevron} width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="9 18 15 12 9 6" />
+                  </svg>
                 </div>
               </div>
             ))
@@ -677,9 +709,7 @@ function Records() {
                       {record.history.map((entry) => (
                         <div key={`${entry.date}-${entry.sessionId}`} style={s.histRow}>
                           <span>{formatDate(entry.date)}</span>
-                          <span>
-                            {formatTime(entry.timeSeconds)}
-                          </span>
+                          <span>{formatTime(entry.timeSeconds)}</span>
                         </div>
                       ))}
                     </>
@@ -701,7 +731,7 @@ function Records() {
                       {r.timeSeconds ? formatTime(r.timeSeconds) : `${r.totalReps} rounds`}
                     </div>
                   </div>
-                  <div style={{ display: 'flex', gap: 12 }}>
+                  <div style={{ display: 'flex', gap: 8 }}>
                     <button style={{ ...s.delBtn, color: 'var(--tint)' }} onClick={() => startEditWod(r)} aria-label="Edit record">&#9998;</button>
                     <button style={s.delBtn} onClick={() => askDeleteManual(r.id, r.name)} aria-label="Delete record">-</button>
                   </div>

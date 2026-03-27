@@ -10,6 +10,7 @@ const s: Record<string, React.CSSProperties> = {
     backdropFilter: 'saturate(180%) blur(20px)',
     WebkitBackdropFilter: 'saturate(180%) blur(20px)',
     borderBottom: '0.5px solid var(--separator)',
+    paddingTop: 'var(--safe-top)',
   },
   inner: {
     maxWidth: 560,
@@ -20,12 +21,6 @@ const s: Record<string, React.CSSProperties> = {
     justifyContent: 'space-between',
     minHeight: 44,
   },
-  title: {
-    fontSize: 20,
-    fontWeight: 700,
-    color: 'var(--text-primary)',
-    letterSpacing: -0.4,
-  },
   centerTitle: {
     position: 'absolute' as const,
     left: '50%',
@@ -34,28 +29,24 @@ const s: Record<string, React.CSSProperties> = {
     fontWeight: 600,
     color: 'var(--text-primary)',
   },
-  nav: {
+  backBtn: {
+    background: 'none',
+    border: 'none',
+    color: 'var(--tint)',
+    fontSize: 17,
+    fontWeight: 400,
+    cursor: 'pointer',
+    padding: '6px 0',
+    display: 'flex',
+    alignItems: 'center',
+    gap: 4,
+    minHeight: 44,
+    minWidth: 44,
+  },
+  rightActions: {
     display: 'flex',
     alignItems: 'center',
     gap: 8,
-  },
-  navLink: {
-    fontSize: 15,
-    fontWeight: 500,
-    color: 'var(--tint)',
-    textDecoration: 'none',
-    padding: '6px 12px',
-    borderRadius: 'var(--radius-xs)',
-    transition: 'background 0.15s ease',
-  },
-  navLinkActive: {
-    fontSize: 15,
-    fontWeight: 600,
-    color: 'var(--tint)',
-    textDecoration: 'none',
-    padding: '6px 12px',
-    borderRadius: 'var(--radius-xs)',
-    background: 'rgba(10, 132, 255, 0.12)',
   },
   addBtn: {
     width: 32,
@@ -74,28 +65,18 @@ const s: Record<string, React.CSSProperties> = {
     lineHeight: 1,
     transition: 'opacity 0.15s ease',
   },
-  backBtn: {
+  lockBtn: {
     background: 'none',
     border: 'none',
-    color: 'var(--tint)',
-    fontSize: 15,
-    fontWeight: 500,
+    color: 'var(--text-tertiary)',
     cursor: 'pointer',
-    padding: '6px 0',
+    padding: 6,
+    borderRadius: 'var(--radius-xs)',
     display: 'flex',
     alignItems: 'center',
-    gap: 4,
-  },
-  logoutBtn: {
-    background: 'none',
-    border: 'none',
-    color: 'var(--text-secondary)',
-    fontSize: 13,
-    fontWeight: 500,
-    cursor: 'pointer',
-    padding: '6px 8px',
-    borderRadius: 'var(--radius-xs)',
-    transition: 'background 0.15s ease',
+    justifyContent: 'center',
+    minHeight: 44,
+    minWidth: 44,
   },
 };
 
@@ -110,11 +91,11 @@ function Header() {
   const location = useLocation();
   const navigate = useNavigate();
   const { logout } = useAuth();
+
   const isHome = location.pathname === '/';
   const isRecords = location.pathname === '/records';
   const isHrv = location.pathname === '/hrv';
   const isTopNav = isHome || isRecords || isHrv;
-  const isSubPage = !isTopNav;
   const pageTitle = getPageTitle(location.pathname);
 
   const handleLogout = () => {
@@ -122,48 +103,40 @@ function Header() {
     navigate('/login');
   };
 
+  if (isTopNav) {
+    // Top-level pages: just a slim bar with lock icon on right
+    return (
+      <header style={s.header}>
+        <div style={s.inner}>
+          <div />
+          <div style={s.rightActions}>
+            {isHome && (
+              <Link to="/new" style={s.addBtn}>+</Link>
+            )}
+            <button style={s.lockBtn} onClick={handleLogout} title="Lock app">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      </header>
+    );
+  }
+
+  // Sub-pages: back button + center title
   return (
     <header style={s.header}>
       <div style={{ ...s.inner, position: 'relative' }}>
-        {isSubPage ? (
-          <button style={s.backBtn} onClick={() => navigate(-1)}>
-            <svg width="10" height="16" viewBox="0 0 10 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <polyline points="8 2 2 8 8 14" />
-            </svg>
-            Back
-          </button>
-        ) : (
-          <Link to="/" style={{ textDecoration: 'none' }}>
-            <span style={s.title}>Workouts</span>
-          </Link>
-        )}
-
+        <button style={s.backBtn} onClick={() => navigate(-1)}>
+          <svg width="10" height="16" viewBox="0 0 10 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="8 2 2 8 8 14" />
+          </svg>
+          Back
+        </button>
         {pageTitle && <span style={s.centerTitle}>{pageTitle}</span>}
-
-        <div style={s.nav}>
-          {isTopNav && (
-            <>
-              <Link to="/hrv" style={isHrv ? s.navLinkActive : s.navLink}>
-                HRV
-              </Link>
-              <Link to="/records" style={isRecords ? s.navLinkActive : s.navLink}>
-                Records
-              </Link>
-            </>
-          )}
-          {isHome && (
-            <Link to="/new" style={s.addBtn}>
-              +
-            </Link>
-          )}
-          <button
-            style={s.logoutBtn}
-            onClick={handleLogout}
-            title="Lock app"
-          >
-            Lock
-          </button>
-        </div>
+        <div style={{ minWidth: 44 }} />
       </div>
     </header>
   );

@@ -6,6 +6,7 @@ import Records from './pages/Records';
 import Hrv from './pages/Hrv';
 import Login from './pages/Login';
 import Header from './components/Header';
+import BottomTabBar from './components/BottomTabBar';
 import Spinner from './components/Spinner';
 import { AuthProvider, useAuth } from './hooks/useAuth';
 
@@ -47,6 +48,7 @@ function AppRoutes() {
           </Routes>
         </div>
       </main>
+      {authenticated && <BottomTabBar />}
     </>
   );
 }

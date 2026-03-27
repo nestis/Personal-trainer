@@ -7,8 +7,15 @@ import Spinner from '../components/Spinner';
 
 const s: Record<string, React.CSSProperties> = {
   page: {
-    paddingTop: 20,
-    paddingBottom: 32,
+    paddingTop: 8,
+    paddingBottom: 80,
+  },
+  title: {
+    fontSize: 34,
+    fontWeight: 700,
+    letterSpacing: -0.7,
+    marginBottom: 20,
+    lineHeight: 1.1,
   },
   listHeader: {
     fontSize: 13,
@@ -16,7 +23,7 @@ const s: Record<string, React.CSSProperties> = {
     color: 'var(--text-secondary)',
     textTransform: 'uppercase' as const,
     letterSpacing: 0.5,
-    padding: '16px 4px 8px',
+    padding: '20px 4px 8px',
   },
   link: {
     display: 'block',
@@ -27,7 +34,7 @@ const s: Record<string, React.CSSProperties> = {
     background: 'var(--bg-grouped-secondary)',
     borderRadius: 'var(--radius)',
     overflow: 'hidden',
-    boxShadow: '0 1px 3px rgba(0,0,0,0.3), 0 4px 12px rgba(0,0,0,0.15)',
+    boxShadow: 'var(--shadow-card)',
   },
   item: {
     padding: '14px 16px',
@@ -35,6 +42,7 @@ const s: Record<string, React.CSSProperties> = {
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: 12,
+    minHeight: 60,
   },
   itemContent: {
     flex: 1,
@@ -65,9 +73,8 @@ const s: Record<string, React.CSSProperties> = {
     textOverflow: 'ellipsis',
   },
   chevron: {
-    color: 'var(--text-secondary)',
+    color: 'var(--text-tertiary)',
     flexShrink: 0,
-    opacity: 0.6,
   },
   separator: {
     height: '0.5px',
@@ -76,12 +83,7 @@ const s: Record<string, React.CSSProperties> = {
   },
   empty: {
     textAlign: 'center' as const,
-    padding: '40px 20px',
-  },
-  emptyIcon: {
-    fontSize: 48,
-    marginBottom: 16,
-    opacity: 0.6,
+    padding: '48px 20px',
   },
   emptyTitle: {
     fontSize: 22,
@@ -93,11 +95,12 @@ const s: Record<string, React.CSSProperties> = {
     fontSize: 15,
     color: 'var(--text-secondary)',
     marginBottom: 28,
+    lineHeight: 1.4,
   },
 };
 
 const ChevronIcon = () => (
-  <svg style={s.chevron} width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+  <svg style={s.chevron} width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
     <polyline points="9 18 15 12 9 6" />
   </svg>
 );
@@ -125,6 +128,8 @@ function SessionList() {
 
   return (
     <div style={s.page} className="fade-in">
+      <div style={s.title}>Workouts</div>
+
       <Calendar
         currentMonth={currentMonth}
         onMonthChange={setCurrentMonth}
@@ -156,7 +161,6 @@ function SessionList() {
             </>
           ) : (
             <>
-              <div style={s.emptyIcon}>&#x1F3CB;&#xFE0F;</div>
               <div style={s.emptyTitle}>No Sessions Yet</div>
               <div style={s.emptySubtitle}>Plan your first workout to get started.</div>
               <Link to="/new" className="btn btn-primary" style={{ animation: 'pulse 2s ease-in-out infinite' }}>

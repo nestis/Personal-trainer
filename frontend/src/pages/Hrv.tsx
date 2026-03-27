@@ -8,12 +8,19 @@ import ConfirmDialog from '../components/ConfirmDialog';
 import { useToast } from '../hooks/useToast';
 
 const s: Record<string, React.CSSProperties> = {
-  page: { paddingTop: 20, paddingBottom: 40 },
+  page: { paddingTop: 8, paddingBottom: 80 },
+  title: {
+    fontSize: 34,
+    fontWeight: 700,
+    letterSpacing: -0.7,
+    marginBottom: 20,
+    lineHeight: 1.1,
+  },
   chartCard: {
     background: 'var(--bg-grouped-secondary)',
     borderRadius: 'var(--radius)',
     padding: 20,
-    boxShadow: '0 1px 3px rgba(0,0,0,0.3), 0 4px 12px rgba(0,0,0,0.15)',
+    boxShadow: 'var(--shadow-card)',
     marginBottom: 20,
   },
   chartTitle: {
@@ -40,10 +47,11 @@ const s: Record<string, React.CSSProperties> = {
     marginBottom: 4,
   },
   highlightValue: {
-    fontSize: 36,
+    fontSize: 40,
     fontWeight: 700,
     color: 'var(--indigo)',
     letterSpacing: -1,
+    fontVariantNumeric: 'tabular-nums',
   },
   highlightUnit: {
     fontSize: 15,
@@ -65,7 +73,7 @@ const s: Record<string, React.CSSProperties> = {
     background: 'var(--bg-grouped-secondary)',
     borderRadius: 'var(--radius)',
     padding: 16,
-    boxShadow: '0 1px 3px rgba(0,0,0,0.3), 0 4px 12px rgba(0,0,0,0.15)',
+    boxShadow: 'var(--shadow-card)',
     marginBottom: 20,
   },
   formRow: {
@@ -83,6 +91,7 @@ const s: Record<string, React.CSSProperties> = {
     alignItems: 'center',
     justifyContent: 'space-between',
     boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+    minHeight: 56,
   },
   recordDate: {
     fontSize: 15,
@@ -105,6 +114,7 @@ const s: Record<string, React.CSSProperties> = {
     fontSize: 15,
     fontWeight: 600,
     color: 'var(--text-primary)',
+    fontVariantNumeric: 'tabular-nums',
   },
   recordValLabel: {
     fontSize: 11,
@@ -113,15 +123,21 @@ const s: Record<string, React.CSSProperties> = {
   },
   recordActions: {
     display: 'flex',
-    gap: 8,
+    gap: 4,
   },
   iconBtn: {
     background: 'none',
     border: 'none',
     color: 'var(--text-secondary)',
     cursor: 'pointer',
-    padding: 4,
+    padding: 8,
     fontSize: 14,
+    minWidth: 40,
+    minHeight: 40,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 'var(--radius-xs)',
   },
   legend: {
     display: 'flex',
@@ -186,33 +202,27 @@ function HrvChart({ records }: { records: HrvRecord[] }) {
     return sorted.map((r, i) => `${i === 0 ? 'M' : 'L'}${toX(i).toFixed(1)},${toY(r[key]).toFixed(1)}`).join(' ');
   }
 
-  // Y-axis ticks
   const tickCount = 5;
   const ticks = Array.from({ length: tickCount }, (_, i) => minVal + (range * i) / (tickCount - 1));
 
   return (
     <svg viewBox={`0 0 ${W} ${H}`} style={s.svgContainer}>
-      {/* Grid lines */}
       {ticks.map((v, i) => (
         <g key={i}>
           <line x1={PAD_L} x2={W - PAD_R} y1={toY(v)} y2={toY(v)} stroke="rgba(120,120,128,0.15)" strokeWidth="0.5" />
           <text x={PAD_L - 4} y={toY(v) + 4} textAnchor="end" fill="rgba(235,235,245,0.4)" fontSize="10">{Math.round(v)}</text>
         </g>
       ))}
-      {/* X-axis labels */}
       {sorted.map((r, i) => {
         if (sorted.length > 10 && i % 2 !== 0 && i !== sorted.length - 1) return null;
         const d = new Date(r.date + 'T00:00:00');
         const label = `${d.getDate()}/${d.getMonth() + 1}`;
         return <text key={r.id} x={toX(i)} y={H - 4} textAnchor="middle" fill="rgba(235,235,245,0.4)" fontSize="10">{label}</text>;
       })}
-      {/* Area fill for avg */}
       <path d={`${makePath('avg')} L${toX(sorted.length - 1)},${toY(minVal)} L${toX(0)},${toY(minVal)} Z`} fill="rgba(10,132,255,0.08)" />
-      {/* Lines */}
       <path d={makePath('max')} fill="none" stroke={COLORS.max} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
       <path d={makePath('avg')} fill="none" stroke={COLORS.avg} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
       <path d={makePath('min')} fill="none" stroke={COLORS.min} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-      {/* Dots */}
       {sorted.map((r, i) => (
         <g key={r.id}>
           <circle cx={toX(i)} cy={toY(r.max)} r="3" fill={COLORS.max} />
@@ -230,7 +240,6 @@ function Hrv() {
   const { toast, showToast, dismissToast } = useToast();
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
 
-  // Form state
   const [formDate, setFormDate] = useState(toDateString(new Date()));
   const [formMin, setFormMin] = useState('');
   const [formMax, setFormMax] = useState('');
@@ -328,7 +337,6 @@ function Hrv() {
 
   if (loading) return <div style={{ paddingTop: 60 }}><Spinner /></div>;
 
-  // Compute 2-week average for the highlight
   const twoWeekAvg = records.length > 0
     ? records.reduce((sum, r) => sum + r.avg, 0) / records.length
     : null;
@@ -337,9 +345,11 @@ function Hrv() {
 
   return (
     <div style={s.page}>
+      <div style={s.title}>HRV</div>
+
       {/* Chart */}
       <div style={s.chartCard}>
-        <div style={s.chartTitle}>HRV — Last 14 Days</div>
+        <div style={s.chartTitle}>Last 14 Days</div>
         <HrvChart records={records} />
         <div style={s.legend}>
           <span><span style={{ ...s.legendDot, background: COLORS.max }} />Max</span>
@@ -348,10 +358,10 @@ function Hrv() {
         </div>
       </div>
 
-      {/* Highlight: 2-week average */}
+      {/* Highlight */}
       {twoWeekAvg !== null && (
         <div style={s.highlightCard}>
-          <div style={s.highlightLabel}>2-Week Average HRV</div>
+          <div style={s.highlightLabel}>2-Week Average</div>
           <div style={s.highlightValue}>{twoWeekAvg.toFixed(1)}</div>
           <div style={s.highlightUnit}>ms</div>
         </div>
@@ -363,73 +373,32 @@ function Hrv() {
         <form onSubmit={handleSubmit}>
           <div style={{ marginBottom: 10 }}>
             <label className="label">Date</label>
-            <input
-              className="input input-sm"
-              type="date"
-              value={formDate}
-              onChange={e => setFormDate(e.target.value)}
-              required
-            />
+            <input className="input input-sm" type="date" value={formDate} onChange={e => setFormDate(e.target.value)} required />
           </div>
           <div style={s.formRow}>
             <div style={s.formField}>
               <label className="label">Min</label>
-              <input
-                className="input input-sm"
-                type="number"
-                step="0.1"
-                min="0"
-                placeholder="e.g. 35"
-                value={formMin}
-                onChange={e => setFormMin(e.target.value)}
-                required
-              />
+              <input className="input input-sm" type="number" step="0.1" min="0" placeholder="e.g. 35" value={formMin} onChange={e => setFormMin(e.target.value)} required />
             </div>
             <div style={s.formField}>
               <label className="label">Max</label>
-              <input
-                className="input input-sm"
-                type="number"
-                step="0.1"
-                min="0"
-                placeholder="e.g. 120"
-                value={formMax}
-                onChange={e => setFormMax(e.target.value)}
-                required
-              />
+              <input className="input input-sm" type="number" step="0.1" min="0" placeholder="e.g. 120" value={formMax} onChange={e => setFormMax(e.target.value)} required />
             </div>
             <div style={s.formField}>
               <label className="label">Avg</label>
-              <input
-                className="input input-sm"
-                type="number"
-                step="0.1"
-                min="0"
-                placeholder="e.g. 65"
-                value={formAvg}
-                onChange={e => setFormAvg(e.target.value)}
-                required
-              />
+              <input className="input input-sm" type="number" step="0.1" min="0" placeholder="e.g. 65" value={formAvg} onChange={e => setFormAvg(e.target.value)} required />
             </div>
           </div>
           <div style={{ marginBottom: 12 }}>
             <label className="label">Notes (optional)</label>
-            <input
-              className="input input-sm"
-              type="text"
-              placeholder="e.g. slept well, stressed..."
-              value={formNotes}
-              onChange={e => setFormNotes(e.target.value)}
-            />
+            <input className="input input-sm" type="text" placeholder="e.g. slept well, stressed..." value={formNotes} onChange={e => setFormNotes(e.target.value)} />
           </div>
           <div style={{ display: 'flex', gap: 10 }}>
             <button className="btn btn-primary btn-sm btn-block" type="submit" disabled={saving}>
               {saving ? 'Saving...' : editingId ? 'Update' : 'Save'}
             </button>
             {editingId && (
-              <button className="btn btn-secondary btn-sm" type="button" onClick={resetForm}>
-                Cancel
-              </button>
+              <button className="btn btn-secondary btn-sm" type="button" onClick={resetForm}>Cancel</button>
             )}
           </div>
         </form>
@@ -479,12 +448,7 @@ function Hrv() {
       )}
 
       {confirmDelete && (
-        <ConfirmDialog
-          title="Delete HRV"
-          message="Delete this HRV measurement?"
-          onConfirm={handleDelete}
-          onCancel={() => setConfirmDelete(null)}
-        />
+        <ConfirmDialog title="Delete HRV" message="Delete this HRV measurement?" onConfirm={handleDelete} onCancel={() => setConfirmDelete(null)} />
       )}
       <Toast toast={toast} onDismiss={dismissToast} />
     </div>

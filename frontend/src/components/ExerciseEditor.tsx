@@ -29,9 +29,10 @@ const s: Record<string, React.CSSProperties> = {
     fontSize: 15,
     fontWeight: 500,
     cursor: 'pointer',
-    padding: '6px 10px',
+    padding: '8px 12px',
     borderRadius: 'var(--radius-xs)',
     transition: 'background 0.15s',
+    minHeight: 44,
   },
   setsHeader: {
     display: 'grid',
@@ -55,6 +56,7 @@ const s: Record<string, React.CSSProperties> = {
     padding: '6px 4px',
     borderRadius: 'var(--radius-xs)',
     transition: 'background 0.15s',
+    minHeight: 44,
   },
   setNum: {
     fontSize: 15,
@@ -64,8 +66,8 @@ const s: Record<string, React.CSSProperties> = {
     fontVariantNumeric: 'tabular-nums',
   },
   checkbox: {
-    width: 22,
-    height: 22,
+    width: 24,
+    height: 24,
     accentColor: 'var(--green)',
     cursor: 'pointer',
     justifySelf: 'center' as const,
@@ -82,7 +84,8 @@ const s: Record<string, React.CSSProperties> = {
     fontSize: 14,
     fontWeight: 500,
     cursor: 'pointer',
-    padding: '6px 0',
+    padding: '8px 0',
+    minHeight: 44,
   },
   addExercise: {
     background: 'none',
@@ -96,6 +99,7 @@ const s: Record<string, React.CSSProperties> = {
     textAlign: 'center' as const,
     borderRadius: 'var(--radius)',
     transition: 'background 0.15s',
+    minHeight: 48,
   },
 };
 
@@ -182,9 +186,7 @@ function ExerciseEditor({ exercises, onChange, readOnly }: Props) {
             <span style={{ ...s.headerLabel, textAlign: 'center' }}>SET</span>
             <span style={s.headerLabel}>REPS</span>
             <span style={s.headerLabel}>KG</span>
-            <span style={{ ...s.headerLabel, textAlign: 'center' }}>
-              {readOnly ? '' : ''}
-            </span>
+            <span style={{ ...s.headerLabel, textAlign: 'center' }}>{readOnly ? '' : ''}</span>
           </div>
 
           {exercise.sets.map((set, setIndex) => {
