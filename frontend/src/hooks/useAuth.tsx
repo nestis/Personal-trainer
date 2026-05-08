@@ -23,6 +23,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setLoading(false);
       return;
     }
+    try {
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      if (payload.exp && payload.exp * 1000 < Date.now()) {
+        api.logout();
+        setLoading(false);
+        return;
+      }
+    } catch {
+      api.logout();
+      setLoading(false);
+      return;
+    }
     setAuthenticated(true);
     setUsername(api.getUsername());
     setLoading(false);

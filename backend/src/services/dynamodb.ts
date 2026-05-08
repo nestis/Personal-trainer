@@ -108,6 +108,8 @@ export async function deleteSession(userId: string, id: string): Promise<boolean
   }
 }
 
+const MAX_LIST_ITEMS = 500;
+
 export async function listSessions(
   userId: string,
   startDate?: string,
@@ -116,7 +118,6 @@ export async function listSessions(
   let items: Session[] = [];
   let lastKey: Record<string, any> | undefined;
 
-  // Build key condition and filter expressions
   let keyCondition = 'userId = :uid';
   const exprValues: Record<string, any> = { ':uid': userId };
 
@@ -142,14 +143,14 @@ export async function listSessions(
         KeyConditionExpression: keyCondition,
         ExpressionAttributeValues: exprValues,
         ...(usesDates && { ExpressionAttributeNames: { '#d': 'date' } }),
-        ScanIndexForward: false, // descending by date
+        ScanIndexForward: false,
         ExclusiveStartKey: lastKey,
       })
     );
 
     items = items.concat((result.Items as Session[]) || []);
     lastKey = result.LastEvaluatedKey;
-  } while (lastKey);
+  } while (lastKey && items.length < MAX_LIST_ITEMS);
 
-  return items;
+  return items.slice(0, MAX_LIST_ITEMS);
 }

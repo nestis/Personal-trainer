@@ -11,8 +11,6 @@ import hrvRouter from './routes/hrv';
 
 const app = express();
 
-// Behind API Gateway / CloudFront — trust the immediate proxy
-// so express-rate-limit uses X-Forwarded-For for client IP
 app.set('trust proxy', 1);
 
 app.use(helmet());
@@ -31,18 +29,23 @@ const authLimiter = rateLimit({
   message: { error: 'Too many login attempts, try again later' },
 });
 
-// Health check (no auth)
+const apiLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 100,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many requests, try again later' },
+});
+
 app.get('/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-// Auth endpoints — rate limited, no JWT required
 app.use('/api/auth', authLimiter, authRouter);
 
-// All data routes require JWT
-app.use('/api/sessions', jwtAuth, sessionsRouter);
-app.use('/api/records', jwtAuth, recordsRouter);
-app.use('/api/manual-records', jwtAuth, manualRecordsRouter);
-app.use('/api/hrv', jwtAuth, hrvRouter);
+app.use('/api/sessions', jwtAuth, apiLimiter, sessionsRouter);
+app.use('/api/records', jwtAuth, apiLimiter, recordsRouter);
+app.use('/api/manual-records', jwtAuth, apiLimiter, manualRecordsRouter);
+app.use('/api/hrv', jwtAuth, apiLimiter, hrvRouter);
 
 export default app;

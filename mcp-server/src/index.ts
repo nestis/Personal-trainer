@@ -57,7 +57,8 @@ const AuthHandler = {
         return new Response("Invalid OAuth request", { status: 400 });
       }
 
-      const payload = btoa(JSON.stringify(oauthReqInfo));
+      const stateData = { ...oauthReqInfo, iat: Date.now(), exp: Date.now() + 5 * 60 * 1000 };
+      const payload = btoa(JSON.stringify(stateData));
       const signature = await hmacSign(payload, getHmacSecret(env));
       const stateParam = `${payload}.${signature}`;
       return new Response(loginPage(stateParam), {
@@ -115,6 +116,13 @@ const AuthHandler = {
       }
 
       const oauthReq = JSON.parse(atob(statePayload));
+
+      if (oauthReq.exp && Date.now() > oauthReq.exp) {
+        return new Response(loginPage(stateParam, "Session expired, please try again"), {
+          status: 400,
+          headers: { "Content-Type": "text/html" },
+        });
+      }
 
       const { redirectTo } = await env.OAUTH_PROVIDER.completeAuthorization({
         request: oauthReq,

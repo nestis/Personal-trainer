@@ -15,6 +15,15 @@ router.get('/', async (req: Request, res: Response) => {
   try {
     const userId = req.userId!;
     const { startDate, endDate } = req.query;
+    const dateRe = /^\d{4}-\d{2}-\d{2}$/;
+    if (startDate && !dateRe.test(startDate as string)) {
+      res.status(400).json({ error: 'startDate must be YYYY-MM-DD' });
+      return;
+    }
+    if (endDate && !dateRe.test(endDate as string)) {
+      res.status(400).json({ error: 'endDate must be YYYY-MM-DD' });
+      return;
+    }
     const sessions = await listSessions(
       userId,
       startDate as string | undefined,
