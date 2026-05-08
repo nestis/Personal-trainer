@@ -10,8 +10,12 @@ Parameters:
   JwtSecret:
     Type: String
     NoEcho: true
-    Default: 'unused'
-    Description: Deprecated - kept for backward compatibility during stack transition
+    Description: Secret key for signing JWT tokens
+  InviteCode:
+    Type: String
+    NoEcho: true
+    Default: ''
+    Description: Invite code required for new user registration (empty = open registration)
   Environment:
     Type: String
     Default: prod
@@ -28,6 +32,9 @@ Globals:
         RECORDS_TABLE: !Ref ManualRecordsTable
         HRV_TABLE: !Ref HrvTable
         APP_PASSWORD: !Ref AppPassword
+        USERS_TABLE: !Ref UsersTable
+        JWT_SECRET: !Ref JwtSecret
+        INVITE_CODE: !Ref InviteCode
     Tags:
       Project: workout-tracker
       Environment: !Ref Environment
@@ -157,7 +164,7 @@ Resources:
         - Key: ManagedBy
           Value: SAM
 
-  # DynamoDB Table for Users (retained for backward compatibility, no longer used by app)
+  # DynamoDB Table for Users
   UsersTable:
     Type: AWS::DynamoDB::Table
     DeletionPolicy: Retain
@@ -168,15 +175,15 @@ Resources:
       AttributeDefinitions:
         - AttributeName: id
           AttributeType: S
-        - AttributeName: email
+        - AttributeName: username
           AttributeType: S
       KeySchema:
         - AttributeName: id
           KeyType: HASH
       GlobalSecondaryIndexes:
-        - IndexName: email-index
+        - IndexName: username-index
           KeySchema:
-            - AttributeName: email
+            - AttributeName: username
               KeyType: HASH
           Projection:
             ProjectionType: ALL
@@ -206,6 +213,8 @@ Resources:
             TableName: !Ref ManualRecordsTable
         - DynamoDBCrudPolicy:
             TableName: !Ref HrvTable
+        - DynamoDBCrudPolicy:
+            TableName: !Ref UsersTable
       Events:
         HealthCheck:
           Type: Api
@@ -323,6 +332,9 @@ Outputs:
   HrvTableName:
     Description: DynamoDB HRV records table name
     Value: !Ref HrvTable
+  UsersTableName:
+    Description: DynamoDB users table name
+    Value: !Ref UsersTable
   CloudFrontDistributionId:
     Description: CloudFront distribution ID for cache invalidation
     Value: !Ref FrontendDistribution

@@ -2,26 +2,35 @@ import { Session, StrengthPR, WodRecord, ManualRecord, ManualStrengthPR, ManualW
 
 const API_BASE = import.meta.env.VITE_API_URL || '/api';
 
-function getPassword(): string | null {
-  return localStorage.getItem('app_password');
+function getToken(): string | null {
+  return localStorage.getItem('jwt_token');
 }
 
-function setPassword(password: string): void {
-  localStorage.setItem('app_password', password);
+function setToken(token: string): void {
+  localStorage.setItem('jwt_token', token);
 }
 
-function clearPassword(): void {
-  localStorage.removeItem('app_password');
+function clearToken(): void {
+  localStorage.removeItem('jwt_token');
+  localStorage.removeItem('username');
+}
+
+function getUsername(): string | null {
+  return localStorage.getItem('username');
+}
+
+function setUsername(username: string): void {
+  localStorage.setItem('username', username);
 }
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
-  const password = getPassword();
+  const token = getToken();
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
     ...options.headers as Record<string, string>,
   };
-  if (password) {
-    headers['Authorization'] = `Bearer ${password}`;
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
   }
 
   const res = await fetch(`${API_BASE}${path}`, {
@@ -30,9 +39,9 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   });
 
   if (res.status === 401) {
-    clearPassword();
+    clearToken();
     window.location.href = '/login';
-    throw new Error('Invalid password');
+    throw new Error('Session expired');
   }
 
   if (!res.ok) {
@@ -46,19 +55,44 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
 
 export const api = {
   // Auth
-  async verifyPassword(password: string): Promise<void> {
-    setPassword(password);
-    try {
-      await request('/auth/verify', { method: 'POST' });
-    } catch {
-      clearPassword();
-      throw new Error('Invalid password');
+  async login(username: string, password: string): Promise<{ token: string; userId: string }> {
+    const res = await fetch(`${API_BASE}/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ error: 'Login failed' }));
+      throw new Error(err.error || 'Login failed');
     }
+    const data = await res.json();
+    setToken(data.token);
+    setUsername(username.trim().toLowerCase());
+    return data;
   },
 
-  setPassword,
-  clearPassword,
-  getPassword,
+  async register(username: string, password: string, inviteCode: string): Promise<{ token: string; userId: string }> {
+    const res = await fetch(`${API_BASE}/auth/register`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password, inviteCode }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ error: 'Registration failed' }));
+      throw new Error(err.error || 'Registration failed');
+    }
+    const data = await res.json();
+    setToken(data.token);
+    setUsername(username.trim().toLowerCase());
+    return data;
+  },
+
+  logout() {
+    clearToken();
+  },
+
+  getToken,
+  getUsername,
 
   // Sessions
   listSessions(startDate?: string, endDate?: string): Promise<Session[]> {

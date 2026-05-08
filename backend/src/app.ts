@@ -2,7 +2,8 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
-import { passwordAuth } from './middleware/auth';
+import { jwtAuth } from './middleware/auth';
+import authRouter from './routes/auth';
 import sessionsRouter from './routes/sessions';
 import recordsRouter from './routes/records';
 import manualRecordsRouter from './routes/manualRecords';
@@ -22,7 +23,6 @@ app.use(cors({
 }));
 app.use(express.json({ limit: '10kb' }));
 
-// Rate limit auth endpoint: 10 attempts per 15 minutes per IP
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 10,
@@ -36,15 +36,13 @@ app.get('/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-// Password verification endpoint — rate limited
-app.post('/api/auth/verify', authLimiter, passwordAuth, (_req, res) => {
-  res.json({ ok: true });
-});
+// Auth endpoints — rate limited, no JWT required
+app.use('/api/auth', authLimiter, authRouter);
 
-// All data routes require password
-app.use('/api/sessions', passwordAuth, sessionsRouter);
-app.use('/api/records', passwordAuth, recordsRouter);
-app.use('/api/manual-records', passwordAuth, manualRecordsRouter);
-app.use('/api/hrv', passwordAuth, hrvRouter);
+// All data routes require JWT
+app.use('/api/sessions', jwtAuth, sessionsRouter);
+app.use('/api/records', jwtAuth, recordsRouter);
+app.use('/api/manual-records', jwtAuth, manualRecordsRouter);
+app.use('/api/hrv', jwtAuth, hrvRouter);
 
 export default app;

@@ -82,11 +82,11 @@ interface HrvRecord {
 
 export class ApiClient {
   private baseUrl: string;
-  private password: string;
+  private token: string;
 
-  constructor(config: { API_URL: string; API_PASSWORD: string }) {
+  constructor(config: { API_URL: string; jwtToken: string }) {
     this.baseUrl = config.API_URL.replace(/\/$/, '');
-    this.password = config.API_PASSWORD;
+    this.token = config.jwtToken;
   }
 
   private assertSafePathSegment(value: string): void {
@@ -100,7 +100,7 @@ export class ApiClient {
     const res = await fetch(url, {
       ...options,
       headers: {
-        'Authorization': `Bearer ${this.password}`,
+        'Authorization': `Bearer ${this.token}`,
         'Content-Type': 'application/json',
         ...options?.headers,
       },

@@ -6,6 +6,7 @@ import { registerTools } from "./tools";
 
 type Props = {
   authenticated: true;
+  jwtToken: string;
 };
 
 export class PersonalTrainerMCP extends McpAgent<Env, Record<string, never>, Props> {
@@ -17,15 +18,13 @@ export class PersonalTrainerMCP extends McpAgent<Env, Record<string, never>, Pro
   async init() {
     const api = new ApiClient({
       API_URL: this.env.API_URL,
-      API_PASSWORD: this.env.API_PASSWORD,
+      jwtToken: this.props.jwtToken,
     });
     registerTools(this.server, api);
   }
 }
 
-// HMAC helpers for integrity-protecting the OAuth state round-trip
 function getHmacSecret(env: Env): string {
-  // COOKIE_ENCRYPTION_KEY is preferred; fall back to API_PASSWORD
   return env.COOKIE_ENCRYPTION_KEY || env.API_PASSWORD;
 }
 
@@ -48,7 +47,6 @@ async function hmacVerify(data: string, signature: string, secret: string): Prom
   return result === 0;
 }
 
-// Simple password-based auth handler for single-user app
 const AuthHandler = {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
@@ -59,7 +57,6 @@ const AuthHandler = {
         return new Response("Invalid OAuth request", { status: 400 });
       }
 
-      // Encode OAuth request info as base64 + HMAC to prevent tampering
       const payload = btoa(JSON.stringify(oauthReqInfo));
       const signature = await hmacSign(payload, getHmacSecret(env));
       const stateParam = `${payload}.${signature}`;
@@ -70,6 +67,7 @@ const AuthHandler = {
 
     if (url.pathname === "/authorize" && request.method === "POST") {
       const formData = await request.formData();
+      const username = formData.get("username") as string;
       const password = formData.get("password") as string;
       const stateParam = formData.get("oauthState") as string;
 
@@ -77,31 +75,54 @@ const AuthHandler = {
         return new Response("Invalid state", { status: 400 });
       }
 
-      if (password !== env.API_PASSWORD) {
-        return new Response(loginPage(stateParam, "Invalid password"), {
-          status: 401,
+      if (!username || !password) {
+        return new Response(loginPage(stateParam, "Username and password are required"), {
+          status: 400,
           headers: { "Content-Type": "text/html" },
         });
       }
 
-      // Verify HMAC to ensure state hasn't been tampered with
-      const dotIdx = stateParam.lastIndexOf(".");
-      const payload = stateParam.slice(0, dotIdx);
-      const signature = stateParam.slice(dotIdx + 1);
+      // Authenticate against the backend API
+      let loginResult: { token: string; userId: string };
+      try {
+        const res = await fetch(`${env.API_URL}/api/auth/login`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ username, password }),
+        });
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({ error: "Login failed" }));
+          return new Response(loginPage(stateParam, (err as { error: string }).error || "Invalid credentials"), {
+            status: 401,
+            headers: { "Content-Type": "text/html" },
+          });
+        }
+        loginResult = await res.json() as { token: string; userId: string };
+      } catch {
+        return new Response(loginPage(stateParam, "Could not reach the API server"), {
+          status: 502,
+          headers: { "Content-Type": "text/html" },
+        });
+      }
 
-      if (!await hmacVerify(payload, signature, getHmacSecret(env))) {
+      // Verify HMAC
+      const dotIdx = stateParam.lastIndexOf(".");
+      const statePayload = stateParam.slice(0, dotIdx);
+      const stateSig = stateParam.slice(dotIdx + 1);
+
+      if (!await hmacVerify(statePayload, stateSig, getHmacSecret(env))) {
         return new Response("Tampered state", { status: 400 });
       }
 
-      const oauthReq = JSON.parse(atob(payload));
+      const oauthReq = JSON.parse(atob(statePayload));
 
       const { redirectTo } = await env.OAUTH_PROVIDER.completeAuthorization({
         request: oauthReq,
-        userId: "owner",
+        userId: loginResult.userId,
         scope: oauthReq.scope,
-        props: { authenticated: true } as Props,
+        props: { authenticated: true, jwtToken: loginResult.token } as Props,
         metadata: {
-          label: "Personal Trainer",
+          label: `Personal Trainer (${username})`,
         },
       });
 
@@ -131,19 +152,23 @@ function loginPage(oauthState: string, error?: string): string {
 <style>
   body { font-family: -apple-system, sans-serif; max-width: 400px; margin: 80px auto; padding: 0 20px; }
   h1 { font-size: 1.4em; }
-  input[type=password] { width: 100%; padding: 10px; margin: 10px 0; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px; font-size: 16px; }
-  button { width: 100%; padding: 12px; background: #2563eb; color: #fff; border: none; border-radius: 4px; font-size: 16px; cursor: pointer; }
+  input[type=text], input[type=password] { width: 100%; padding: 10px; margin: 6px 0 14px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px; font-size: 16px; }
+  label { font-size: 14px; font-weight: 500; color: #555; }
+  button { width: 100%; padding: 12px; background: #2563eb; color: #fff; border: none; border-radius: 4px; font-size: 16px; cursor: pointer; margin-top: 6px; }
   button:hover { background: #1d4ed8; }
   .error { color: #dc2626; margin-bottom: 10px; }
 </style>
 </head>
 <body>
   <h1>Personal Trainer MCP</h1>
-  <p>Enter your app password to authorize Claude to access your workout data.</p>
+  <p>Sign in to authorize Claude to access your workout data.</p>
   ${error ? `<p class="error">${escapeHtml(error)}</p>` : ""}
   <form method="POST">
     <input type="hidden" name="oauthState" value="${escapeHtml(oauthState)}">
-    <input type="password" name="password" placeholder="App password" required autofocus>
+    <label>Username</label>
+    <input type="text" name="username" placeholder="Your username" required autofocus>
+    <label>Password</label>
+    <input type="password" name="password" placeholder="Your password" required>
     <button type="submit">Authorize</button>
   </form>
 </body>

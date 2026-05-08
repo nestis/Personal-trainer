@@ -46,7 +46,7 @@ const s: Record<string, React.CSSProperties> = {
     background: 'rgba(255, 69, 58, 0.12)',
     borderRadius: 'var(--radius-sm)',
   },
-  registerLink: {
+  loginLink: {
     textAlign: 'center' as const,
     marginTop: 20,
     fontSize: 15,
@@ -59,11 +59,12 @@ const s: Record<string, React.CSSProperties> = {
   },
 };
 
-function Login() {
-  const { login } = useAuth();
+function Register() {
+  const { register } = useAuth();
   const navigate = useNavigate();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [inviteCode, setInviteCode] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -72,10 +73,10 @@ function Login() {
     setError('');
     setLoading(true);
     try {
-      await login(username, password);
+      await register(username, password, inviteCode);
       navigate('/');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Login failed');
+      setError(err instanceof Error ? err.message : 'Registration failed');
     } finally {
       setLoading(false);
     }
@@ -92,8 +93,8 @@ function Login() {
           <line x1="17" y1="7" x2="17" y2="17" />
         </svg>
       </div>
-      <div style={s.title}>Workout Tracker</div>
-      <div style={s.subtitle}>Sign in to continue</div>
+      <div style={s.title}>Create Account</div>
+      <div style={s.subtitle}>Join the workout tracker</div>
 
       <form style={s.form} onSubmit={handleSubmit}>
         {error && <div style={s.error}>{error}</div>}
@@ -105,7 +106,7 @@ function Login() {
             type="text"
             value={username}
             onChange={(e) => setUsername(e.target.value)}
-            placeholder="Your username"
+            placeholder="Choose a username"
             autoComplete="username"
             autoFocus
             required
@@ -119,8 +120,20 @@ function Login() {
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            placeholder="Your password"
-            autoComplete="current-password"
+            placeholder="Choose a password (6+ characters)"
+            autoComplete="new-password"
+            required
+          />
+        </div>
+
+        <div>
+          <label className="label">Invite Code</label>
+          <input
+            className="input"
+            type="text"
+            value={inviteCode}
+            onChange={(e) => setInviteCode(e.target.value)}
+            placeholder="Enter your invite code"
             required
           />
         </div>
@@ -128,19 +141,19 @@ function Login() {
         <button
           className="btn btn-primary btn-block"
           type="submit"
-          disabled={loading || !username || !password}
+          disabled={loading || !username || !password || !inviteCode}
           style={{ marginTop: 8 }}
         >
-          {loading ? 'Signing in...' : 'Sign In'}
+          {loading ? 'Creating account...' : 'Create Account'}
         </button>
       </form>
 
-      <div style={s.registerLink}>
-        Don't have an account?{' '}
-        <Link to="/register" style={s.link}>Create one</Link>
+      <div style={s.loginLink}>
+        Already have an account?{' '}
+        <Link to="/login" style={s.link}>Sign in</Link>
       </div>
     </div>
   );
 }
 
-export default Login;
+export default Register;

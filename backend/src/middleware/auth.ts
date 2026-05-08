@@ -1,7 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-
-const OWNER_USER_ID = 'owner';
-const APP_PASSWORD = process.env.APP_PASSWORD || 'changeme';
+import { verifyToken } from '../services/users';
 
 declare global {
   namespace Express {
@@ -11,21 +9,21 @@ declare global {
   }
 }
 
-export function passwordAuth(req: Request, res: Response, next: NextFunction): void {
+export function jwtAuth(req: Request, res: Response, next: NextFunction): void {
   const header = req.headers.authorization;
 
   if (!header || !header.startsWith('Bearer ')) {
-    res.status(401).json({ error: 'Unauthorized: missing password' });
+    res.status(401).json({ error: 'Unauthorized: missing token' });
     return;
   }
 
-  const password = header.slice(7);
+  const token = header.slice(7);
 
-  if (password !== APP_PASSWORD) {
-    res.status(401).json({ error: 'Unauthorized: invalid password' });
-    return;
+  try {
+    const payload = verifyToken(token);
+    req.userId = payload.userId;
+    next();
+  } catch {
+    res.status(401).json({ error: 'Unauthorized: invalid or expired token' });
   }
-
-  req.userId = OWNER_USER_ID;
-  next();
 }

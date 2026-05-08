@@ -5,6 +5,7 @@ import SessionDetail from './pages/SessionDetail';
 import Records from './pages/Records';
 import Hrv from './pages/Hrv';
 import Login from './pages/Login';
+import Register from './pages/Register';
 import Header from './components/Header';
 import BottomTabBar from './components/BottomTabBar';
 import Spinner from './components/Spinner';
@@ -39,6 +40,7 @@ function AppRoutes() {
         <div key={location.pathname} className="fade-in">
           <Routes location={location}>
             <Route path="/login" element={<PublicOnlyRoute><Login /></PublicOnlyRoute>} />
+            <Route path="/register" element={<PublicOnlyRoute><Register /></PublicOnlyRoute>} />
             <Route path="/" element={<ProtectedRoute><SessionList /></ProtectedRoute>} />
             <Route path="/new" element={<ProtectedRoute><SessionForm /></ProtectedRoute>} />
             <Route path="/session/:id" element={<ProtectedRoute><SessionDetail /></ProtectedRoute>} />
