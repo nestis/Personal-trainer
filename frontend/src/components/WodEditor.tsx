@@ -19,8 +19,8 @@ const s: Record<string, React.CSSProperties> = {
     marginBottom: 14,
   },
   recovery: {
-    alignSelf: 'end',
-    paddingBottom: 12,
+    marginTop: 8,
+    minHeight: 20,
     fontSize: 14,
     fontWeight: 600,
     color: 'var(--green)',
@@ -56,15 +56,31 @@ function numberField(
   );
 }
 
-function recoveryText(wod: WOD): string {
-  const { maxHeartRate: max, recoveryHeartRate2min: rec } = wod;
-  if (!rec) return '';
-  if (!max) return 'Add max HR to see the drop';
-  if (rec > max) return 'Higher than max HR, check values';
-  return `Recovery −${max - rec} bpm`;
+function recoveryText(wod: WOD): { text: string; warn: boolean } {
+  const { recoveryFromHeartRate: from, recoveryToHeartRate: to, recoveryHeartRate2min: drop } = wod;
+  if (from !== undefined && to !== undefined) {
+    return to > from
+      ? { text: 'To is higher than From, check values', warn: true }
+      : { text: `Recovery −${from - to} bpm`, warn: false };
+  }
+  if (from !== undefined || to !== undefined) return { text: 'Fill in both to see the drop', warn: false };
+  if (drop !== undefined) return { text: `Recovery −${drop} bpm (entered earlier)`, warn: false };
+  return { text: '', warn: false };
+}
+
+/** Changing From or To keeps the stored drop in step (the backend recomputes it on save) */
+function withRecovery(wod: WOD, patch: Pick<WOD, 'recoveryFromHeartRate' | 'recoveryToHeartRate'>): WOD {
+  const next = { ...wod, ...patch };
+  next.recoveryHeartRate2min =
+    next.recoveryFromHeartRate !== undefined && next.recoveryToHeartRate !== undefined
+      ? next.recoveryFromHeartRate - next.recoveryToHeartRate
+      : undefined;
+  return next;
 }
 
 function WodEditor({ wod, onChange, readOnly }: Props) {
+  const recovery = recoveryText(wod);
+
   return (
     <div style={s.card}>
       <label style={{ display: 'block', ...s.field }}>
@@ -110,10 +126,16 @@ function WodEditor({ wod, onChange, readOnly }: Props) {
         <span />
         {numberField('Avg HR', wod.avgHeartRate, 'bpm', (avgHeartRate) => onChange({ ...wod, avgHeartRate }), readOnly)}
         {numberField('Max HR', wod.maxHeartRate, 'bpm', (maxHeartRate) => onChange({ ...wod, maxHeartRate }), readOnly)}
-        {numberField('HR after 2 min', wod.recoveryHeartRate2min, 'bpm', (recoveryHeartRate2min) => onChange({ ...wod, recoveryHeartRate2min }), readOnly)}
-        <span style={s.recovery} aria-live="polite">
-          {recoveryText(wod)}
-        </span>
+        <div style={{ gridColumn: '1 / -1' }}>
+          <span className="label">Heart-rate recovery</span>
+          <div style={s.grid}>
+            {numberField('From (end of WOD)', wod.recoveryFromHeartRate, 'bpm', (v) => onChange(withRecovery(wod, { recoveryFromHeartRate: v, recoveryToHeartRate: wod.recoveryToHeartRate })), readOnly)}
+            {numberField('To (2 min later)', wod.recoveryToHeartRate, 'bpm', (v) => onChange(withRecovery(wod, { recoveryFromHeartRate: wod.recoveryFromHeartRate, recoveryToHeartRate: v })), readOnly)}
+          </div>
+          <div style={{ ...s.recovery, color: recovery.warn ? 'var(--orange)' : 'var(--green)' }} aria-live="polite">
+            {recovery.text}
+          </div>
+        </div>
       </div>
     </div>
   );

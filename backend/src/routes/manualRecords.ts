@@ -56,7 +56,7 @@ router.post('/strength', async (req: Request, res: Response) => {
 router.post('/wod', async (req: Request, res: Response) => {
   try {
     const userId = req.userId!;
-    const { name, description, timeSeconds, totalReps, avgHeartRate, maxHeartRate, rpe, recoveryHeartRate2min, date, notes } = req.body;
+    const { name, description, timeSeconds, totalReps, avgHeartRate, maxHeartRate, rpe, recoveryFromHeartRate, recoveryToHeartRate, recoveryHeartRate2min, date, notes } = req.body;
     if (!name || !date) {
       res.status(400).json({ error: 'name and date are required' });
       return;
@@ -69,13 +69,13 @@ router.post('/wod', async (req: Request, res: Response) => {
       res.status(400).json({ error: 'Either timeSeconds or totalReps (rounds) is required' });
       return;
     }
-    const extrasErr = wodExtrasError(rpe, recoveryHeartRate2min);
+    const extrasErr = wodExtrasError(rpe, recoveryHeartRate2min, recoveryFromHeartRate, recoveryToHeartRate);
     if (extrasErr) {
       res.status(400).json({ error: extrasErr });
       return;
     }
     const record = await createManualWodRecord(userId, {
-      name, description, timeSeconds, totalReps, avgHeartRate, maxHeartRate, rpe, recoveryHeartRate2min, date, notes,
+      name, description, timeSeconds, totalReps, avgHeartRate, maxHeartRate, rpe, recoveryFromHeartRate, recoveryToHeartRate, recoveryHeartRate2min, date, notes,
     });
     res.status(201).json(record);
   } catch (error) {
@@ -88,18 +88,18 @@ router.post('/wod', async (req: Request, res: Response) => {
 router.put('/wod/:id', async (req: Request, res: Response) => {
   try {
     const userId = req.userId!;
-    const { name, description, timeSeconds, totalReps, avgHeartRate, maxHeartRate, rpe, recoveryHeartRate2min, date, notes } = req.body;
+    const { name, description, timeSeconds, totalReps, avgHeartRate, maxHeartRate, rpe, recoveryFromHeartRate, recoveryToHeartRate, recoveryHeartRate2min, date, notes } = req.body;
     if (timeSeconds !== undefined && (typeof timeSeconds !== 'number' || timeSeconds <= 0)) {
       res.status(400).json({ error: 'timeSeconds must be a positive number' });
       return;
     }
-    const extrasErr = wodExtrasError(rpe, recoveryHeartRate2min);
+    const extrasErr = wodExtrasError(rpe, recoveryHeartRate2min, recoveryFromHeartRate, recoveryToHeartRate);
     if (extrasErr) {
       res.status(400).json({ error: extrasErr });
       return;
     }
     const updated = await updateManualWodRecord(userId, req.params.id, {
-      name, description, timeSeconds, totalReps, avgHeartRate, maxHeartRate, rpe, recoveryHeartRate2min, date, notes,
+      name, description, timeSeconds, totalReps, avgHeartRate, maxHeartRate, rpe, recoveryFromHeartRate, recoveryToHeartRate, recoveryHeartRate2min, date, notes,
     });
     if (!updated) {
       res.status(404).json({ error: 'Record not found' });

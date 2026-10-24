@@ -134,7 +134,8 @@ export const api = {
     avgHeartRate?: number;
     maxHeartRate?: number;
     rpe?: number;
-    recoveryHeartRate2min?: number;
+    recoveryFromHeartRate?: number;
+    recoveryToHeartRate?: number;
     date: string;
     notes?: string;
   }): Promise<ManualWodRecord> {
@@ -152,7 +153,8 @@ export const api = {
     avgHeartRate?: number;
     maxHeartRate?: number;
     rpe?: number;
-    recoveryHeartRate2min?: number;
+    recoveryFromHeartRate?: number;
+    recoveryToHeartRate?: number;
     date?: string;
     notes?: string;
   }): Promise<ManualWodRecord> {

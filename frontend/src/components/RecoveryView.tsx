@@ -105,7 +105,7 @@ function daysAgoStr(n: number): string {
 }
 
 function DropChart({ points }: { points: WodRecoveryPoint[] }) {
-  const data = points.filter((p) => p.drop !== undefined);
+  const data = points;
   if (data.length === 0) return null;
 
   const W = 318;
@@ -114,8 +114,8 @@ function DropChart({ points }: { points: WodRecoveryPoint[] }) {
   const PAD_T = 12;
   const PAD_B = 8;
 
-  const drops = data.map((p) => p.drop as number);
-  const lo = Math.max(0, Math.min(...drops) - 5);
+  const drops = data.map((p) => p.drop);
+  const lo = Math.min(0, Math.min(...drops)) - 5;
   const hi = Math.max(...drops) + 5;
   const range = hi - lo || 1;
 
@@ -126,7 +126,7 @@ function DropChart({ points }: { points: WodRecoveryPoint[] }) {
     data.length === 1 ? W / 2 : PAD_X + ((parseLocalDate(date).getTime() - t0) / span) * (W - PAD_X * 2);
   const toY = (v: number) => PAD_T + (H - PAD_T - PAD_B) * (1 - (v - lo) / range);
 
-  const line = data.map((p) => `${toX(p.date).toFixed(1)},${toY(p.drop as number).toFixed(1)}`).join(' ');
+  const line = data.map((p) => `${toX(p.date).toFixed(1)},${toY(p.drop).toFixed(1)}`).join(' ');
   const last = data[data.length - 1];
   const label = (d: string) => parseLocalDate(d).toLocaleDateString('en-US', { day: 'numeric', month: 'short' });
 
@@ -142,7 +142,7 @@ function DropChart({ points }: { points: WodRecoveryPoint[] }) {
           <polyline points={line} fill="none" stroke="var(--green)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
         )}
         {data.map((p, i) => (
-          <circle key={i} cx={toX(p.date)} cy={toY(p.drop as number)} r={i === data.length - 1 ? 4.5 : 3.5} fill="var(--green)" />
+          <circle key={i} cx={toX(p.date)} cy={toY(p.drop)} r={i === data.length - 1 ? 4.5 : 3.5} fill="var(--green)" />
         ))}
       </svg>
       <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4, fontSize: 11, color: 'var(--text-secondary)' }}>
@@ -185,9 +185,7 @@ function RecoveryView() {
     const recentFrom = daysAgoStr(27);
     const previousFrom = daysAgoStr(55);
     const drops = (from: string, to?: string) =>
-      shown
-        .filter((p) => p.drop !== undefined && p.date >= from && (!to || p.date < to))
-        .map((p) => p.drop as number);
+      shown.filter((p) => p.date >= from && (!to || p.date < to)).map((p) => p.drop);
     const recent = avg(drops(recentFrom));
     const previous = avg(drops(previousFrom, recentFrom));
     const delta = recent !== null && previous !== null ? Math.round((recent - previous) * 10) / 10 : null;
@@ -209,8 +207,8 @@ function RecoveryView() {
     return (
       <div style={s.card}>
         <div style={s.empty}>
-          No recovery readings yet. After a WOD, wait 2 minutes, then enter your heart rate in
-          &ldquo;HR after 2 min&rdquo; on the WOD card (and your max HR to see the drop).
+          No recovery readings yet. On the WOD card, enter your heart rate at the end of the WOD
+          (From) and 2 minutes later (To).
         </div>
       </div>
     );
@@ -259,14 +257,9 @@ function RecoveryView() {
           <div style={{ ...s.statValue, color: 'var(--text-secondary)' }}>–</div>
         )}
         <div style={{ fontSize: 13, color: 'var(--text-secondary)', marginTop: 4 }}>
-          Max HR minus HR 2 minutes later. A bigger drop is better.
+          From (end of the WOD) minus To (2 minutes later). A bigger drop is better.
         </div>
         <DropChart points={shown} />
-        {shown.some((p) => p.drop === undefined) && (
-          <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 8 }}>
-            Readings without a max HR are listed below but not charted.
-          </div>
-        )}
       </section>
 
       <div style={s.sectionLabel}>History</div>
@@ -282,11 +275,11 @@ function RecoveryView() {
                 </span>
               </span>
               <span style={{ textAlign: 'right', flexShrink: 0, fontVariantNumeric: 'tabular-nums' }}>
-                <span style={{ display: 'block', fontSize: 17, fontWeight: 600, color: p.drop !== undefined ? 'var(--green)' : 'var(--text-primary)' }}>
-                  {p.drop !== undefined ? `−${p.drop} bpm` : `${p.recoveryHeartRate2min} bpm`}
+                <span style={{ display: 'block', fontSize: 17, fontWeight: 600, color: p.drop >= 0 ? 'var(--green)' : 'var(--orange)' }}>
+                  {p.drop >= 0 ? `−${p.drop} bpm` : `+${-p.drop} bpm`}
                 </span>
                 <span style={{ display: 'block', fontSize: 13, color: 'var(--text-secondary)', marginTop: 2 }}>
-                  {p.maxHeartRate !== undefined ? `${p.maxHeartRate} → ${p.recoveryHeartRate2min}` : 'HR after 2 min'}
+                  {p.fromHeartRate !== undefined && p.toHeartRate !== undefined ? `${p.fromHeartRate} → ${p.toHeartRate}` : 'recovery'}
                 </span>
               </span>
             </>

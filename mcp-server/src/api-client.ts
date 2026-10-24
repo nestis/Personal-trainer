@@ -30,7 +30,9 @@ interface WOD {
   avgHeartRate?: number;
   maxHeartRate?: number;
   rpe?: number;
-  recoveryHeartRate2min?: number;
+  recoveryFromHeartRate?: number;
+  recoveryToHeartRate?: number;
+  recoveryHeartRate2min?: number; // the drop (From - To), computed by the backend
 }
 
 interface StrengthPR {
@@ -70,7 +72,9 @@ interface ManualRecord {
   avgHeartRate?: number;
   maxHeartRate?: number;
   rpe?: number;
-  recoveryHeartRate2min?: number;
+  recoveryFromHeartRate?: number;
+  recoveryToHeartRate?: number;
+  recoveryHeartRate2min?: number; // the drop (From - To), computed by the backend
 }
 
 interface WodRecoveryPoint {
@@ -81,9 +85,9 @@ interface WodRecoveryPoint {
   recordId?: string;
   timeSeconds?: number;
   rpe?: number;
-  maxHeartRate?: number;
-  recoveryHeartRate2min: number;
-  drop?: number;
+  fromHeartRate?: number;
+  toHeartRate?: number;
+  drop: number;
 }
 
 interface HrvRecord {
@@ -207,7 +211,9 @@ export class ApiClient {
     avgHeartRate?: number;
     maxHeartRate?: number;
     rpe?: number;
-    recoveryHeartRate2min?: number;
+    recoveryFromHeartRate?: number;
+  recoveryToHeartRate?: number;
+  recoveryHeartRate2min?: number; // the drop (From - To), computed by the backend
     date: string;
     notes?: string;
   }): Promise<ManualRecord> {
