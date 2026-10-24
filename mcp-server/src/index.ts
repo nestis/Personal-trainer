@@ -50,7 +50,9 @@ async function hmacVerify(data: string, signature: string, secret: string): Prom
 
 // Simple password-based auth handler for single-user app
 const AuthHandler = {
-  async fetch(request: Request, env: Env): Promise<Response> {
+  // The provider types handler env as unknown; it is our Env at runtime
+  async fetch(request: Request, rawEnv: unknown): Promise<Response> {
+    const env = rawEnv as Env;
     const url = new URL(request.url);
 
     if (url.pathname === "/authorize" && request.method === "GET") {

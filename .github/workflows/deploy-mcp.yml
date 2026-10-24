@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - 'mcp-server/**'
+      - '.github/workflows/deploy-mcp.yml'
   workflow_dispatch:
 
 permissions:
@@ -41,6 +42,13 @@ jobs:
         run: npx tsc --noEmit
         working-directory: mcp-server
 
+      # Bundles the worker without deploying (dummy KV id, no credentials needed)
+      - name: Build check (wrangler dry run)
+        run: |
+          sed 's/PLACEHOLDER_KV_ID/00000000000000000000000000000000/' wrangler.toml > wrangler.ci.toml
+          npx wrangler deploy --dry-run --config wrangler.ci.toml --outdir "$RUNNER_TEMP/worker-out"
+        working-directory: mcp-server
+
   # ────────────────────────────────────────────────────
   # Job 2: Deploy to Cloudflare Workers
   # ────────────────────────────────────────────────────
@@ -61,6 +69,21 @@ jobs:
       - name: Install dependencies
         run: npm ci
         working-directory: mcp-server
+
+      # wrangler.toml keeps a placeholder; the real KV namespace id is a repo secret
+      - name: Set KV namespace id
+        run: |
+          if ! [[ "$KV_ID" =~ ^[0-9a-f]{32}$ ]]; then
+            echo "::error::Secret CLOUDFLARE_KV_NAMESPACE_ID is missing or is not a 32-character hex id."
+            echo "Create it with: npx wrangler kv namespace create OAUTH_KV (or: npx wrangler kv namespace list)"
+            exit 1
+          fi
+          sed -i "s/PLACEHOLDER_KV_ID/$KV_ID/" wrangler.toml
+          grep -q PLACEHOLDER_KV_ID wrangler.toml && { echo "::error::Placeholder still present"; exit 1; }
+          echo "KV namespace id set"
+        working-directory: mcp-server
+        env:
+          KV_ID: ${{ secrets.CLOUDFLARE_KV_NAMESPACE_ID }}
 
       - name: Deploy with Wrangler
         run: npx wrangler deploy

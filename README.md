@@ -149,7 +149,7 @@ aws cloudfront create-invalidation --distribution-id $CF_ID --paths "/*"
 
 ### MCP Server (Cloudflare Workers)
 
-Automated via `.github/workflows/deploy-mcp.yml` on push to `main` when `mcp-server/**` files change.
+Automated via `.github/workflows/deploy-mcp.yml` on push to `main` when `mcp-server/**` files change (or run it manually from the Actions tab). It needs the secrets listed under *Required GitHub Secrets*, including `CLOUDFLARE_KV_NAMESPACE_ID`. The worker's own secrets (`API_URL`, `API_PASSWORD`, `COOKIE_ENCRYPTION_KEY`) stay in Cloudflare and are kept across deploys.
 
 #### Manual deployment:
 
@@ -183,8 +183,8 @@ After deployment, connect from Claude.ai: **Settings → Integrations → Add MC
 
 ### `deploy-mcp.yml` — Cloudflare deployment
 
-1. Type-checks MCP server
-2. Deploys via `wrangler deploy` (requires GitHub environment approval)
+1. Type-checks the MCP server and bundles it with a `wrangler deploy --dry-run`
+2. Puts the real KV namespace id into `wrangler.toml`, then deploys via `wrangler deploy` (requires GitHub environment approval)
 3. Verifies worker is responding
 
 ### Required GitHub Secrets
@@ -196,6 +196,7 @@ After deployment, connect from Claude.ai: **Settings → Integrations → Add MC
 | `APP_PASSWORD` | deploy.yml | Application password |
 | `CLOUDFLARE_API_TOKEN` | deploy-mcp.yml | Cloudflare API token |
 | `CLOUDFLARE_ACCOUNT_ID` | deploy-mcp.yml | Cloudflare account ID |
+| `CLOUDFLARE_KV_NAMESPACE_ID` | deploy-mcp.yml | ID of the `OAUTH_KV` namespace (replaces `PLACEHOLDER_KV_ID` in `wrangler.toml` at deploy time) |
 | `MCP_WORKER_URL` | deploy-mcp.yml | Deployed worker URL for verification |
 
 ## API Reference
