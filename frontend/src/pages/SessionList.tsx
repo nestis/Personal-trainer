@@ -19,7 +19,7 @@ const s: Record<string, React.CSSProperties> = {
   },
   nextCard: {
     background: 'var(--bg-grouped-secondary)',
-    borderRadius: 16,
+    borderRadius: 'var(--radius-card)',
     padding: 16,
   },
   nextLabel: {
@@ -76,7 +76,7 @@ const s: Record<string, React.CSSProperties> = {
   },
   list: {
     background: 'var(--bg-grouped-secondary)',
-    borderRadius: 16,
+    borderRadius: 'var(--radius-card)',
     overflow: 'hidden',
   },
   link: {

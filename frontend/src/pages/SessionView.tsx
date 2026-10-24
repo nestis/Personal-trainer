@@ -19,13 +19,14 @@ const s: Record<string, React.CSSProperties> = {
     paddingBottom: 'calc(var(--safe-bottom) + 48px)',
   },
   nav: {
-    position: 'relative',
+    position: 'sticky',
+    top: 0,
+    zIndex: 95,
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingTop: 'var(--safe-top)',
-    minHeight: 52,
-    margin: '0 -12px',
+    padding: 'calc(var(--safe-top) + 6px) 0 8px',
+    minHeight: 58,
   },
   navBtn: {
     minWidth: 44,
@@ -43,23 +44,25 @@ const s: Record<string, React.CSSProperties> = {
   navTitle: {
     fontSize: 17,
     fontWeight: 600,
+    padding: '10px 18px',
+    borderRadius: 999,
   },
   menu: {
     position: 'absolute' as const,
-    right: 12,
-    top: 'calc(var(--safe-top) + 46px)',
+    right: 0,
+    top: 'calc(var(--safe-top) + 56px)',
     zIndex: 120,
-    minWidth: 240,
-    background: 'var(--bg-tertiary)',
-    borderRadius: 14,
-    boxShadow: 'var(--shadow-elevated)',
+    minWidth: 250,
+    borderRadius: 26,
+    padding: '6px 0',
     overflow: 'hidden',
+    transformOrigin: 'top right',
   },
   menuItem: {
     display: 'block',
     width: '100%',
     minHeight: 48,
-    padding: '0 16px',
+    padding: '0 20px',
     textAlign: 'left' as const,
     background: 'none',
     border: 'none',
@@ -69,7 +72,8 @@ const s: Record<string, React.CSSProperties> = {
   },
   menuSep: {
     height: '0.5px',
-    background: 'var(--separator)',
+    background: 'rgba(255,255,255,0.1)',
+    margin: '0 20px',
   },
   statusRow: {
     display: 'flex',
@@ -91,7 +95,7 @@ const s: Record<string, React.CSSProperties> = {
   },
   card: {
     background: 'var(--bg-grouped-secondary)',
-    borderRadius: 16,
+    borderRadius: 'var(--radius-card)',
     padding: '14px 16px 4px',
     marginBottom: 12,
   },
@@ -196,7 +200,7 @@ const s: Record<string, React.CSSProperties> = {
   },
   notesCard: {
     background: 'var(--bg-grouped-secondary)',
-    borderRadius: 16,
+    borderRadius: 'var(--radius-card)',
     padding: 12,
     marginBottom: 12,
   },
@@ -204,20 +208,19 @@ const s: Record<string, React.CSSProperties> = {
     position: 'fixed' as const,
     left: 0,
     right: 0,
-    bottom: 0,
+    bottom: 'calc(var(--safe-bottom) + 10px)',
     zIndex: 100,
-    background: 'rgba(18, 18, 20, 0.92)',
-    backdropFilter: 'saturate(180%) blur(20px)',
-    WebkitBackdropFilter: 'saturate(180%) blur(20px)',
-    borderTop: '0.5px solid var(--separator)',
-    paddingBottom: 'var(--safe-bottom)',
+    padding: '0 16px',
+    pointerEvents: 'none',
   },
   bottomInner: {
-    maxWidth: 560,
+    pointerEvents: 'auto',
+    maxWidth: 520,
     margin: '0 auto',
-    padding: '12px 20px',
+    padding: 6,
+    borderRadius: 999,
     display: 'flex',
-    gap: 12,
+    gap: 8,
     alignItems: 'center',
   },
   rest: {
@@ -227,8 +230,8 @@ const s: Record<string, React.CSSProperties> = {
     height: 50,
     boxSizing: 'border-box' as const,
     padding: '0 16px',
-    borderRadius: 25,
-    background: 'var(--bg-tertiary)',
+    borderRadius: 999,
+    background: 'rgba(255,255,255,0.08)',
     fontSize: 17,
     fontWeight: 600,
     fontVariantNumeric: 'tabular-nums',
@@ -507,22 +510,21 @@ function SessionView() {
   const showWod = wodHasContent(wod) || addWod;
 
   return (
-    <div style={{ ...s.page, paddingBottom: isPlanned ? 'calc(var(--safe-bottom) + 110px)' : s.page.paddingBottom }} className="fade-in">
+    <div style={{ ...s.page, paddingBottom: isPlanned ? 'calc(var(--safe-bottom) + 120px)' : s.page.paddingBottom }} className="fade-in">
       <div style={s.nav}>
-        <button style={s.navBtn} onClick={() => navigate('/')}>
-          <svg width="10" height="16" viewBox="0 0 10 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <button className="glass glass-strong glass-btn" aria-label="Back to workouts" onClick={() => navigate('/')}>
+          <svg width="11" height="18" viewBox="0 0 10 16" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
             <polyline points="8 2 2 8 8 14" />
           </svg>
-          Workouts
         </button>
-        <span style={s.navTitle}>{formatDayLabel(session.date)}</span>
+        <span className="glass glass-strong" style={s.navTitle}>{formatDayLabel(session.date)}</span>
         <button
-          style={{ ...s.navBtn, justifyContent: 'center' }}
+          className="glass glass-strong glass-btn"
           aria-label="Session options"
           aria-expanded={menuOpen}
           onClick={() => setMenuOpen((o) => !o)}
         >
-          <svg width="22" height="6" viewBox="0 0 22 6" fill="currentColor" aria-hidden="true">
+          <svg width="20" height="5" viewBox="0 0 22 6" fill="currentColor" aria-hidden="true">
             <circle cx="3" cy="3" r="2.5" />
             <circle cx="11" cy="3" r="2.5" />
             <circle cx="19" cy="3" r="2.5" />
@@ -531,7 +533,7 @@ function SessionView() {
         {menuOpen && (
           <>
             <div style={{ position: 'fixed', inset: 0, zIndex: 110 }} onClick={() => setMenuOpen(false)} />
-            <div style={s.menu} role="menu">
+            <div className="glass glass-strong glass-pop" style={s.menu} role="menu">
               <button
                 role="menuitem"
                 style={s.menuItem}
@@ -677,7 +679,7 @@ function SessionView() {
 
       {isPlanned && (
         <div style={s.bottomBar}>
-          <div style={s.bottomInner}>
+          <div className="glass" style={s.bottomInner}>
             <div style={s.rest} aria-label="Time since last set">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--orange)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                 <circle cx="12" cy="13" r="8" />

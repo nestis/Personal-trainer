@@ -12,7 +12,7 @@ interface Props {
 const s: Record<string, React.CSSProperties> = {
   card: {
     background: 'var(--bg-grouped-secondary)',
-    borderRadius: 16,
+    borderRadius: 'var(--radius-card)',
     padding: '4px 16px 0',
     marginBottom: 12,
   },

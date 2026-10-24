@@ -13,7 +13,7 @@ interface Props {
 const s: Record<string, React.CSSProperties> = {
   wrapper: {
     position: 'fixed',
-    bottom: 24,
+    bottom: 'calc(var(--safe-bottom) + 96px)',
     left: '50%',
     transform: 'translateX(-50%)',
     zIndex: 1000,
@@ -21,17 +21,14 @@ const s: Record<string, React.CSSProperties> = {
     width: 'calc(100% - 40px)',
   },
   toast: {
-    padding: '12px 16px',
-    borderRadius: 12,
-    background: 'var(--bg-toast)',
-    backdropFilter: 'blur(12px)',
-    WebkitBackdropFilter: 'blur(12px)',
+    padding: '12px 18px',
+    borderRadius: 999,
+    justifyContent: 'center',
     fontSize: 15,
     fontWeight: 500,
     display: 'flex',
     alignItems: 'center',
     gap: 10,
-    boxShadow: '0 4px 20px rgba(0,0,0,0.4)',
   },
 };
 
@@ -57,9 +54,10 @@ function Toast({ toast, onDismiss }: Props) {
   return (
     <div style={s.wrapper}>
       <div
+        className="glass glass-strong"
+        role="status"
         style={{
           ...s.toast,
-          borderLeft: `3px solid ${borderColor}`,
           animation: exiting ? 'slideDown 0.3s ease-out forwards' : 'slideUp 0.3s ease-out',
         }}
       >

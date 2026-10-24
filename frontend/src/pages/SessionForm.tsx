@@ -15,17 +15,13 @@ const s: Record<string, React.CSSProperties> = {
   nav: {
     position: 'sticky',
     top: 0,
-    zIndex: 50,
+    zIndex: 95, // above the scroll edge fade (90)
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'space-between',
-    minHeight: 52,
-    margin: '0 -20px 12px',
-    padding: 'var(--safe-top) 8px 0',
-    background: 'rgba(0, 0, 0, 0.72)',
-    backdropFilter: 'saturate(180%) blur(20px)',
-    WebkitBackdropFilter: 'saturate(180%) blur(20px)',
-    borderBottom: '0.5px solid var(--separator)',
+    minHeight: 58,
+    margin: '0 0 12px',
+    padding: 'calc(var(--safe-top) + 6px) 0 8px',
   },
   navBtn: {
     minWidth: 60,
@@ -42,13 +38,15 @@ const s: Record<string, React.CSSProperties> = {
   navTitle: {
     fontSize: 17,
     fontWeight: 600,
+    padding: '10px 18px',
+    borderRadius: 999,
   },
   page: {
     paddingBottom: 'calc(var(--safe-bottom) + 40px)',
   },
   group: {
     background: 'var(--bg-grouped-secondary)',
-    borderRadius: 16,
+    borderRadius: 'var(--radius-card)',
     overflow: 'hidden',
     marginBottom: 20,
   },
@@ -228,12 +226,16 @@ function SessionForm() {
   return (
     <div style={s.page} className="fade-in">
       <div style={s.nav}>
-        <button style={s.navBtn} onClick={() => navigate(-1)}>
-          Cancel
+        <button className="glass glass-strong glass-btn" aria-label="Cancel" onClick={() => navigate(-1)}>
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true">
+            <path d="M2 2l10 10M12 2L2 12" />
+          </svg>
         </button>
-        <span style={s.navTitle}>{isEdit ? 'Edit session' : 'New session'}</span>
-        <button style={{ ...s.navBtn, justifyContent: 'flex-end', fontWeight: 600 }} onClick={handleSave} disabled={saving}>
-          {saving ? 'Saving…' : 'Save'}
+        <span className="glass glass-strong" style={s.navTitle}>{isEdit ? 'Edit session' : 'New session'}</span>
+        <button className="glass glass-btn tinted" aria-label={saving ? 'Saving' : 'Save'} onClick={handleSave} disabled={saving}>
+          <svg width="16" height="13" viewBox="0 0 12 10" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <path d="M1 5l3.5 3.5L11 1.5" />
+          </svg>
         </button>
       </div>
 

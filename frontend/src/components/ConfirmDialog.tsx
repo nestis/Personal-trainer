@@ -12,9 +12,7 @@ const s: Record<string, React.CSSProperties> = {
     position: 'fixed',
     inset: 0,
     zIndex: 900,
-    background: 'rgba(0, 0, 0, 0.6)',
-    backdropFilter: 'blur(8px)',
-    WebkitBackdropFilter: 'blur(8px)',
+    background: 'rgba(0, 0, 0, 0.45)',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
@@ -22,23 +20,21 @@ const s: Record<string, React.CSSProperties> = {
   },
   dialog: {
     width: '100%',
-    maxWidth: 320,
-    background: 'var(--bg-tertiary)',
-    borderRadius: 'var(--radius)',
-    padding: 24,
-    animation: 'scaleIn 0.2s ease-out',
-    boxShadow: 'var(--shadow-elevated)',
+    maxWidth: 300,
+    borderRadius: 34,
+    padding: '22px 18px 18px',
+    textAlign: 'center' as const,
   },
   title: {
     fontSize: 17,
     fontWeight: 600,
-    marginBottom: 8,
+    marginBottom: 6,
   },
   message: {
     fontSize: 15,
     color: 'var(--text-secondary)',
     lineHeight: 1.4,
-    marginBottom: 24,
+    marginBottom: 20,
   },
   actions: {
     display: 'flex',
@@ -49,7 +45,7 @@ const s: Record<string, React.CSSProperties> = {
 function ConfirmDialog({ title, message, confirmLabel = 'Delete', destructive = true, onConfirm, onCancel }: Props) {
   return (
     <div style={s.backdrop} onClick={onCancel}>
-      <div style={s.dialog} onClick={(e) => e.stopPropagation()}>
+      <div className="glass glass-strong glass-pop" role="alertdialog" aria-label={title} style={s.dialog} onClick={(e) => e.stopPropagation()}>
         <div style={s.title}>{title}</div>
         <div style={s.message}>{message}</div>
         <div style={s.actions}>

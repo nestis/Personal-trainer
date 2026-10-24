@@ -48,6 +48,7 @@ function AppRoutes() {
           </Routes>
         </div>
       </main>
+      {authenticated && <div className={`scroll-edge-top${focusMode ? ' tall' : ''}`} aria-hidden="true" />}
       {authenticated && !focusMode && <BottomTabBar />}
     </>
   );

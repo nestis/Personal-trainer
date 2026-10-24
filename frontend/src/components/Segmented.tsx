@@ -11,43 +11,63 @@ interface Props<T extends string> {
   fullWidth?: boolean;
 }
 
+// iOS 26 segmented control: a capsule track with a glass thumb that slides
 const s: Record<string, React.CSSProperties> = {
   wrap: {
-    display: 'flex',
+    position: 'relative',
     background: 'var(--fill)',
-    borderRadius: 9,
-    padding: 2,
+    borderRadius: 999,
+    padding: 3,
+  },
+  thumb: {
+    position: 'absolute',
+    top: 3,
+    bottom: 3,
+    left: 3,
+    borderRadius: 999,
+    background: 'rgba(255, 255, 255, 0.18)',
+    boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.22), 0 2px 8px rgba(0,0,0,0.35)',
+    transition: 'transform 0.4s var(--spring)',
   },
   seg: {
-    flex: 1,
-    minHeight: 32,
-    padding: '0 14px',
+    position: 'relative',
+    zIndex: 1,
+    flex: '1 1 0',
+    minWidth: 0,
+    minHeight: 34,
+    padding: '0 8px',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
     border: 'none',
     background: 'transparent',
     color: 'var(--text-secondary)',
     fontWeight: 500,
     fontSize: 14,
-    borderRadius: 7,
+    borderRadius: 999,
     cursor: 'pointer',
-    transition: 'background 0.2s ease, color 0.2s ease',
-  },
-  active: {
-    background: 'var(--seg-active)',
-    color: 'var(--text-primary)',
-    fontWeight: 600,
-    boxShadow: '0 1px 4px rgba(0,0,0,0.3)',
+    whiteSpace: 'nowrap' as const,
+    transition: 'color 0.2s ease',
   },
 };
 
 function Segmented<T extends string>({ options, value, onChange, label, fullWidth = true }: Props<T>) {
+  const index = Math.max(0, options.findIndex((o) => o.value === value));
   return (
     <div role="group" aria-label={label} style={{ ...s.wrap, display: fullWidth ? 'flex' : 'inline-flex' }}>
+      <span
+        aria-hidden="true"
+        style={{ ...s.thumb, width: `calc((100% - 6px) / ${options.length})`, transform: `translateX(${index * 100}%)` }}
+      />
       {options.map((o) => (
         <button
           key={o.value}
           type="button"
           aria-pressed={o.value === value}
-          style={{ ...s.seg, ...(o.value === value ? s.active : {}) }}
+          style={{
+            ...s.seg,
+            ...(options.length > 2 && { fontSize: 13 }),
+            ...(o.value === value ? { color: 'var(--text-primary)', fontWeight: 600 } : {}),
+          }}
           onClick={() => onChange(o.value)}
         >
           {o.label}
