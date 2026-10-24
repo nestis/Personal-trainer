@@ -1,9 +1,7 @@
-import { useCallback, useRef } from 'react';
 import { WOD } from '../types';
 import AutoTextarea from './AutoTextarea';
 import TimeInput from './TimeInput';
 import RpeInput from './RpeInput';
-import RecoveryTimer from './RecoveryTimer';
 
 interface Props {
   wod: WOD;
@@ -39,14 +37,12 @@ function numberField(
   value: number | undefined,
   placeholder: string,
   onChange: (n: number | undefined) => void,
-  readOnly?: boolean,
-  inputRef?: React.Ref<HTMLInputElement>
+  readOnly?: boolean
 ) {
   return (
     <label>
       <span className="label">{label}</span>
       <input
-        ref={inputRef}
         className="input input-sm"
         type="number"
         inputMode="numeric"
@@ -69,12 +65,6 @@ function recoveryText(wod: WOD): string {
 }
 
 function WodEditor({ wod, onChange, readOnly }: Props) {
-  const hrRef = useRef<HTMLInputElement>(null);
-  const focusHr = useCallback(() => {
-    hrRef.current?.scrollIntoView({ block: 'center', behavior: 'smooth' });
-    hrRef.current?.focus();
-  }, []);
-
   return (
     <div style={s.card}>
       <label style={{ display: 'block', ...s.field }}>
@@ -115,14 +105,12 @@ function WodEditor({ wod, onChange, readOnly }: Props) {
         <RpeInput label="RPE" value={wod.rpe} onChange={(rpe) => onChange({ ...wod, rpe })} readOnly={readOnly} />
       </div>
 
-      {!readOnly && <RecoveryTimer onDone={focusHr} />}
-
       <div style={s.grid}>
         {numberField('Rounds / reps', wod.totalReps, '0', (totalReps) => onChange({ ...wod, totalReps }), readOnly)}
         <span />
         {numberField('Avg HR', wod.avgHeartRate, 'bpm', (avgHeartRate) => onChange({ ...wod, avgHeartRate }), readOnly)}
         {numberField('Max HR', wod.maxHeartRate, 'bpm', (maxHeartRate) => onChange({ ...wod, maxHeartRate }), readOnly)}
-        {numberField('HR after 2 min', wod.recoveryHeartRate2min, 'bpm', (recoveryHeartRate2min) => onChange({ ...wod, recoveryHeartRate2min }), readOnly, hrRef)}
+        {numberField('HR after 2 min', wod.recoveryHeartRate2min, 'bpm', (recoveryHeartRate2min) => onChange({ ...wod, recoveryHeartRate2min }), readOnly)}
         <span style={s.recovery} aria-live="polite">
           {recoveryText(wod)}
         </span>
