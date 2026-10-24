@@ -21,7 +21,7 @@ const s: Record<string, React.CSSProperties> = {
   actions: {
     display: 'flex',
     alignItems: 'center',
-    marginRight: -8,
+    gap: 10,
   },
   hit: {
     width: 44,
@@ -50,15 +50,13 @@ export function AddButton({ onClick, to, label, subtle }: { onClick?: () => void
   return (
     <button
       type="button"
-      style={s.hit}
+      className={`glass glass-btn${subtle ? '' : ' tinted'}`}
       aria-label={label}
       onClick={() => (to ? navigate(to) : onClick?.())}
     >
-      <span style={{ ...s.circle, background: subtle ? 'var(--bg-tertiary)' : 'var(--tint-fill)', color: subtle ? 'var(--text-secondary)' : '#fff' }}>
-        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
-          <path d="M8 2v12M2 8h12" />
-        </svg>
-      </span>
+      <svg width="17" height="17" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+        <path d="M8 2v12M2 8h12" />
+      </svg>
     </button>
   );
 }
@@ -70,14 +68,12 @@ function AccountButton() {
 
   return (
     <>
-      <button type="button" style={s.hit} aria-label="Lock app" onClick={() => setConfirm(true)}>
-        <span style={{ ...s.circle, background: 'var(--bg-tertiary)', color: 'var(--text-secondary)' }}>
+      <button type="button" className="glass glass-btn" aria-label="Lock app" onClick={() => setConfirm(true)}>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
             <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
             <path d="M7 11V7a5 5 0 0 1 10 0v4" />
           </svg>
-        </span>
-      </button>
+        </button>
       {confirm && (
         <ConfirmDialog
           title="Lock app?"

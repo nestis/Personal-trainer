@@ -15,7 +15,7 @@ const DAY_LABELS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
 const s: Record<string, React.CSSProperties> = {
   card: {
     background: 'var(--bg-grouped-secondary)',
-    borderRadius: 16,
+    borderRadius: 'var(--radius-card)',
     padding: '4px 12px 12px',
   },
   header: {

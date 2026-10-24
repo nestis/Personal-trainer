@@ -8,7 +8,7 @@ import Spinner from './Spinner';
 const s: Record<string, React.CSSProperties> = {
   card: {
     background: 'var(--bg-grouped-secondary)',
-    borderRadius: 16,
+    borderRadius: 'var(--radius-card)',
     padding: '14px 16px 16px',
     marginBottom: 12,
   },
@@ -65,7 +65,7 @@ const s: Record<string, React.CSSProperties> = {
   },
   list: {
     background: 'var(--bg-grouped-secondary)',
-    borderRadius: 16,
+    borderRadius: 'var(--radius-card)',
     overflow: 'hidden',
   },
   row: {

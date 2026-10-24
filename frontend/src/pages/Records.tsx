@@ -121,7 +121,7 @@ const s: Record<string, React.CSSProperties> = {
   },
   rowsCard: {
     background: 'var(--bg-grouped-secondary)',
-    borderRadius: 16,
+    borderRadius: 'var(--radius-card)',
     overflow: 'hidden',
     marginBottom: 12,
   },
