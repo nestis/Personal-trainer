@@ -739,6 +739,16 @@ function Records() {
           <div style={s.highlightSub}>
             {selectedExercise.bestSet.reps} rep{selectedExercise.bestSet.reps !== 1 ? 's' : ''} @ {selectedExercise.bestSet.kilos} kg — {formatDate(selectedExercise.bestSet.date)}
           </div>
+          <div style={{ ...s.highlightSub, marginTop: 4, fontSize: 13 }}>
+            {selectedExercise.basis === 'latest'
+              ? 'From your latest reading (nothing in the last 6 weeks)'
+              : 'Best of the last 6 weeks'}
+          </div>
+          {selectedExercise.allTimeBest && selectedExercise.allTimeBest.estimated1RM > selectedExercise.estimated1RM && (
+            <div style={{ ...s.highlightSub, marginTop: 4, fontSize: 13 }}>
+              All-time best {fmt(selectedExercise.allTimeBest.estimated1RM)} kg · {formatDate(selectedExercise.allTimeBest.date)}
+            </div>
+          )}
         </div>
 
         <ExerciseChart exercise={selectedExercise} />
@@ -802,7 +812,7 @@ function Records() {
                 <span>{rows.length} exercise{rows.length === 1 ? '' : 's'}</span>
                 <select style={s.sortSelect} aria-label="Sort exercises" value={sortBy} onChange={(e) => setSortBy(e.target.value as typeof sortBy)}>
                   <option value="recent">Sort: Recent</option>
-                  <option value="strength">Sort: Est. 1RM</option>
+                  <option value="strength">Sort: Est. 1RM (current)</option>
                   <option value="name">Sort: Name</option>
                 </select>
               </div>
@@ -810,7 +820,8 @@ function Records() {
                 <div style={s.rowsCard}>
                   {rows.map((ex, i) => {
                     const delta = trendOf(ex);
-                    const isNew = ex.history.length > 1 && daysBetween(ex.bestSet.date, today) <= 14 && daysBetween(ex.bestSet.date, today) >= 0;
+                    const recordDate = (ex.allTimeBest || ex.bestSet).date;
+                    const isNew = ex.history.length > 1 && daysBetween(recordDate, today) <= 14 && daysBetween(recordDate, today) >= 0;
                     return (
                       <div key={ex.exercise.toLowerCase()}>
                         {i > 0 && <div style={s.rowSep} />}
@@ -819,7 +830,7 @@ function Records() {
                             <span style={{ display: 'block', fontSize: 17, fontWeight: 600, overflowWrap: 'anywhere' }}>{ex.exercise}</span>
                             <span style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 6, marginTop: 3, fontSize: 13, color: 'var(--text-secondary)' }}>
                               {isNew && <span style={{ ...s.newBadge, whiteSpace: 'nowrap' }}>NEW PR</span>}
-                              <span>{ex.bestSet.reps} × {ex.bestSet.kilos} kg · {formatDate(ex.bestSet.date)}</span>
+                              <span>{ex.bestSet.reps} × {ex.bestSet.kilos} kg · {formatDate(ex.bestSet.date)}{ex.basis === 'latest' ? ' · latest' : ''}</span>
                             </span>
                           </span>
                           <Sparkline values={ex.history.map((h) => h.estimated1RM)} />
@@ -841,6 +852,9 @@ function Records() {
                       </div>
                     );
                   })}
+                  <div style={{ padding: '10px 16px', fontSize: 12, lineHeight: 1.4, color: 'var(--text-secondary)', borderTop: '0.5px solid var(--separator)' }}>
+                    Est. 1RM is your best of the last 6 weeks, or your latest reading when you have not done the lift since.
+                  </div>
                 </div>
               ) : (
                 <div style={s.empty}>No exercises match “{query}”</div>

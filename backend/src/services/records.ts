@@ -127,6 +127,15 @@ export async function getWodRecords(userId: string, prefetchedSessions?: Session
   return wodRecords;
 }
 
+// "Latest readings" for the current max: the last 6 weeks
+const RECENT_DAYS = 42;
+
+function daysAgoISO(days: number): string {
+  const d = new Date();
+  d.setUTCDate(d.getUTCDate() - days);
+  return d.toISOString().split('T')[0];
+}
+
 export async function getAggregatedStrength(userId: string): Promise<AggregatedExercise[]> {
   const [sessions, manualRecords] = await Promise.all([
     listSessions(userId),
@@ -201,20 +210,38 @@ export async function getAggregatedStrength(userId: string): Promise<AggregatedE
   }
 
   const result: AggregatedExercise[] = [];
+  const recentFrom = daysAgoISO(RECENT_DAYS);
 
   for (const { displayName, entries } of exerciseMap.values()) {
     if (entries.length === 0) continue;
 
-    // Best entry by estimated 1RM
-    const best = entries.reduce((a, b) => a.estimated1RM >= b.estimated1RM ? a : b);
+    // Best entry ever, by estimated 1RM
+    const allTime = entries.reduce((a, b) => (a.estimated1RM >= b.estimated1RM ? a : b));
 
     // Sort history by date ascending
     const history = [...entries].sort((a, b) => a.date.localeCompare(b.date));
 
+    // Current max: best of the last 6 weeks; with no entry that recent, the latest reading
+    const recent = entries.filter((e) => e.date >= recentFrom);
+    let current: typeof allTime;
+    let basis: AggregatedExercise['basis'];
+    if (recent.length > 0) {
+      current = recent.reduce((a, b) => (a.estimated1RM >= b.estimated1RM ? a : b));
+      basis = 'last6weeks';
+    } else {
+      const latestDate = history[history.length - 1].date;
+      current = history
+        .filter((e) => e.date === latestDate)
+        .reduce((a, b) => (a.estimated1RM >= b.estimated1RM ? a : b));
+      basis = 'latest';
+    }
+
     result.push({
       exercise: displayName,
-      estimated1RM: best.estimated1RM,
-      bestSet: { reps: best.reps, kilos: best.kilos, date: best.date },
+      estimated1RM: current.estimated1RM,
+      bestSet: { reps: current.reps, kilos: current.kilos, date: current.date },
+      basis,
+      allTimeBest: { estimated1RM: allTime.estimated1RM, reps: allTime.reps, kilos: allTime.kilos, date: allTime.date },
       history,
     });
   }

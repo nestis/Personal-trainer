@@ -107,6 +107,25 @@ GET /api/records/strength
 
 Returns `StrengthPR[]` — best lifts per exercise per rep count, computed from all completed sessions. Sorted by exercise name then reps.
 
+#### Aggregated Strength (used by the Records screen)
+
+```
+GET /api/records/strength/aggregated
+```
+
+Returns `AggregatedExercise[]`, one per exercise (sessions and manual records combined, one best set per exercise per day), sorted by name. `estimated1RM` and `bestSet` are the **current max**: the best entry of the last 6 weeks, or, if there is none that recent, the latest reading (`basis` is `"last6weeks"` or `"latest"`). `allTimeBest` is the best entry ever, and `history` has every entry, oldest first.
+
+```json
+{
+  "exercise": "Back Squat",
+  "estimated1RM": 105,
+  "bestSet": { "reps": 5, "kilos": 90, "date": "2026-09-24" },
+  "basis": "last6weeks",
+  "allTimeBest": { "estimated1RM": 200, "reps": 1, "kilos": 200, "date": "2026-04-07" },
+  "history": [{ "date": "2026-04-07", "estimated1RM": 200, "reps": 1, "kilos": 200 }]
+}
+```
+
 #### WOD Records
 
 ```
