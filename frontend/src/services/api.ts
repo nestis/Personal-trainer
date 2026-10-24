@@ -1,4 +1,4 @@
-import { Session, StrengthPR, WodRecord, ManualRecord, ManualStrengthPR, ManualWodRecord, HrvRecord, AggregatedExercise } from '../types';
+import { WodRecoveryPoint, Session, StrengthPR, WodRecord, ManualRecord, ManualStrengthPR, ManualWodRecord, HrvRecord, AggregatedExercise } from '../types';
 
 const API_BASE = import.meta.env.VITE_API_URL || '/api';
 
@@ -99,6 +99,10 @@ export const api = {
     return request('/records/strength/aggregated');
   },
 
+  getWodRecovery(): Promise<WodRecoveryPoint[]> {
+    return request('/records/wod-recovery');
+  },
+
   getWodRecords(): Promise<WodRecord[]> {
     return request('/records/wods');
   },
@@ -129,6 +133,8 @@ export const api = {
     totalReps?: number;
     avgHeartRate?: number;
     maxHeartRate?: number;
+    rpe?: number;
+    recoveryHeartRate2min?: number;
     date: string;
     notes?: string;
   }): Promise<ManualWodRecord> {
@@ -145,6 +151,8 @@ export const api = {
     totalReps?: number;
     avgHeartRate?: number;
     maxHeartRate?: number;
+    rpe?: number;
+    recoveryHeartRate2min?: number;
     date?: string;
     notes?: string;
   }): Promise<ManualWodRecord> {

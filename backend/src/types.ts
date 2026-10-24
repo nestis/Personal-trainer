@@ -18,6 +18,8 @@ export interface WOD {
   totalReps?: number;
   avgHeartRate?: number;
   maxHeartRate?: number;
+  rpe?: number; // perceived exertion, 1-10 in steps of 0.5
+  recoveryHeartRate2min?: number; // heart rate (bpm) 2 minutes after finishing
 }
 
 export interface StrengthPR {
@@ -94,6 +96,8 @@ export interface ManualWodRecord {
   totalReps?: number;
   avgHeartRate?: number;
   maxHeartRate?: number;
+  rpe?: number;
+  recoveryHeartRate2min?: number;
   date: string;
   notes?: string;
   createdAt: string;
@@ -122,3 +126,17 @@ export interface HrvRecord {
   updatedAt: string;
 }
 
+
+// One WOD with a measured 2-minute heart-rate recovery (sessions + manual WOD records)
+export interface WodRecoveryPoint {
+  date: string;
+  source: 'session' | 'manual';
+  name: string;
+  sessionId?: string;
+  recordId?: string;
+  timeSeconds?: number;
+  rpe?: number;
+  maxHeartRate?: number;
+  recoveryHeartRate2min: number;
+  drop?: number; // maxHeartRate - recoveryHeartRate2min (bigger is better)
+}

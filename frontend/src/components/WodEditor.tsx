@@ -1,6 +1,7 @@
 import { WOD } from '../types';
 import AutoTextarea from './AutoTextarea';
 import TimeInput from './TimeInput';
+import RpeInput from './RpeInput';
 
 interface Props {
   wod: WOD;
@@ -16,6 +17,13 @@ const s: Record<string, React.CSSProperties> = {
   },
   field: {
     marginBottom: 14,
+  },
+  recovery: {
+    alignSelf: 'end',
+    paddingBottom: 12,
+    fontSize: 14,
+    fontWeight: 600,
+    color: 'var(--green)',
   },
   grid: {
     display: 'grid',
@@ -46,6 +54,14 @@ function numberField(
       />
     </label>
   );
+}
+
+function recoveryText(wod: WOD): string {
+  const { maxHeartRate: max, recoveryHeartRate2min: rec } = wod;
+  if (!rec) return '';
+  if (!max) return 'Add max HR to see the drop';
+  if (rec > max) return 'Higher than max HR, check values';
+  return `Recovery −${max - rec} bpm`;
 }
 
 function WodEditor({ wod, onChange, readOnly }: Props) {
@@ -85,11 +101,19 @@ function WodEditor({ wod, onChange, readOnly }: Props) {
         />
       </div>
 
+      <div style={s.field}>
+        <RpeInput label="RPE" value={wod.rpe} onChange={(rpe) => onChange({ ...wod, rpe })} readOnly={readOnly} />
+      </div>
+
       <div style={s.grid}>
         {numberField('Rounds / reps', wod.totalReps, '0', (totalReps) => onChange({ ...wod, totalReps }), readOnly)}
         <span />
         {numberField('Avg HR', wod.avgHeartRate, 'bpm', (avgHeartRate) => onChange({ ...wod, avgHeartRate }), readOnly)}
         {numberField('Max HR', wod.maxHeartRate, 'bpm', (maxHeartRate) => onChange({ ...wod, maxHeartRate }), readOnly)}
+        {numberField('HR after 2 min', wod.recoveryHeartRate2min, 'bpm', (recoveryHeartRate2min) => onChange({ ...wod, recoveryHeartRate2min }), readOnly)}
+        <span style={s.recovery} aria-live="polite">
+          {recoveryText(wod)}
+        </span>
       </div>
     </div>
   );

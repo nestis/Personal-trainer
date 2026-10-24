@@ -1,5 +1,5 @@
 import { Router, Request, Response } from 'express';
-import { getStrengthPRs, getWodRecords, getAggregatedStrength } from '../services/records';
+import { getStrengthPRs, getWodRecords, getAggregatedStrength, getWodRecovery } from '../services/records';
 
 const router = Router();
 
@@ -36,6 +36,17 @@ router.get('/wods', async (req: Request, res: Response) => {
   } catch (error) {
     console.error('Error getting WOD records:', error);
     res.status(500).json({ error: 'Failed to get WOD records' });
+  }
+});
+
+// WODs with a measured 2-minute heart-rate recovery (sessions + manual), oldest first
+router.get('/wod-recovery', async (req: Request, res: Response) => {
+  try {
+    const userId = req.userId!;
+    res.json(await getWodRecovery(userId));
+  } catch (error) {
+    console.error('Error getting WOD recovery:', error);
+    res.status(500).json({ error: 'Failed to get WOD recovery' });
   }
 });
 

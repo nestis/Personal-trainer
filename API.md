@@ -115,6 +115,30 @@ GET /api/records/wods
 
 Returns `WodRecord[]` — best times per named WOD with full attempt history, computed from all completed sessions. Sorted by WOD name.
 
+#### WOD Recovery
+
+```
+GET /api/records/wod-recovery
+```
+
+Returns `WodRecoveryPoint[]`, oldest first: every WOD that has a `recoveryHeartRate2min` value, from sessions (any status) and manual WOD records. `drop` is `maxHeartRate - recoveryHeartRate2min` (bigger is better) and is only present when `maxHeartRate` was recorded.
+
+```json
+[
+  {
+    "date": "2026-10-20",
+    "source": "session",
+    "name": "Fran",
+    "sessionId": "…",
+    "timeSeconds": 245,
+    "rpe": 9,
+    "maxHeartRate": 176,
+    "recoveryHeartRate2min": 142,
+    "drop": 34
+  }
+]
+```
+
 ---
 
 ### Manual Records
@@ -187,6 +211,8 @@ Content-Type: application/json
 ```
 
 All fields are optional — only provided fields are updated. Returns the updated `ManualWodRecord`.
+
+`rpe` (1–10, steps of 0.5) and `recoveryHeartRate2min` (whole bpm, 30–250) are optional on create and update. They are also optional inside a session's `wod` object.
 
 #### Delete Manual Record
 
@@ -299,6 +325,8 @@ Returns `204 No Content`.
   totalReps?: number;        // Total reps or rounds (for AMRAP)
   avgHeartRate?: number;
   maxHeartRate?: number;
+  rpe?: number;              // Perceived exertion, 1-10 in steps of 0.5
+  recoveryHeartRate2min?: number; // Heart rate (bpm) 2 minutes after finishing (30-250)
 }
 ```
 
@@ -362,10 +390,29 @@ Returns `204 No Content`.
   totalReps?: number;        // Present for AMRAP (rounds)
   avgHeartRate?: number;
   maxHeartRate?: number;
+  rpe?: number;
+  recoveryHeartRate2min?: number;
   date: string;
   notes?: string;
   createdAt: string;
   updatedAt: string;
+}
+```
+
+### WodRecoveryPoint (computed, read-only)
+
+```typescript
+{
+  date: string;
+  source: 'session' | 'manual';
+  name: string;              // WOD name, or "WOD"
+  sessionId?: string;        // when source is 'session'
+  recordId?: string;         // when source is 'manual'
+  timeSeconds?: number;
+  rpe?: number;
+  maxHeartRate?: number;
+  recoveryHeartRate2min: number;
+  drop?: number;             // maxHeartRate - recoveryHeartRate2min
 }
 ```
 

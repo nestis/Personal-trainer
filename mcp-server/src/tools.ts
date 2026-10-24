@@ -59,6 +59,8 @@ export function registerTools(server: McpServer, api: ApiClient) {
         totalReps: z.number().optional(),
         avgHeartRate: z.number().optional(),
         maxHeartRate: z.number().optional(),
+        rpe: z.number().min(1).max(10).optional().describe("Perceived exertion 1-10, steps of 0.5"),
+        recoveryHeartRate2min: z.number().int().min(30).max(250).optional().describe("Heart rate (bpm) 2 minutes after finishing the WOD"),
       }).describe("Workout of the Day"),
       notes: z.string().optional(),
     },
@@ -92,6 +94,8 @@ export function registerTools(server: McpServer, api: ApiClient) {
         totalReps: z.number().optional(),
         avgHeartRate: z.number().optional(),
         maxHeartRate: z.number().optional(),
+        rpe: z.number().min(1).max(10).optional().describe("Perceived exertion 1-10, steps of 0.5"),
+        recoveryHeartRate2min: z.number().int().min(30).max(250).optional().describe("Heart rate (bpm) 2 minutes after finishing the WOD"),
       }).optional(),
       notes: z.string().optional(),
     },
@@ -117,6 +121,16 @@ export function registerTools(server: McpServer, api: ApiClient) {
     {},
     async () => {
       try { return ok(await api.getWodRecords()); }
+      catch (e) { return fail(e); }
+    },
+  );
+
+  server.tool(
+    "get_wod_recovery",
+    "Get WODs with a measured 2-minute heart-rate recovery (oldest first). drop = max HR minus HR 2 minutes after finishing; a bigger drop means better recovery. Includes RPE, time and WOD name.",
+    {},
+    async () => {
+      try { return ok(await api.getWodRecovery()); }
       catch (e) { return fail(e); }
     },
   );
@@ -159,6 +173,8 @@ export function registerTools(server: McpServer, api: ApiClient) {
       totalReps: z.number().optional().describe("Total reps (for AMRAP)"),
       avgHeartRate: z.number().optional(),
       maxHeartRate: z.number().optional(),
+      rpe: z.number().min(1).max(10).optional().describe("Perceived exertion 1-10, steps of 0.5"),
+      recoveryHeartRate2min: z.number().int().min(30).max(250).optional().describe("Heart rate (bpm) 2 minutes after finishing the WOD"),
       date: z.string().describe("Date (YYYY-MM-DD)"),
       notes: z.string().optional(),
     },

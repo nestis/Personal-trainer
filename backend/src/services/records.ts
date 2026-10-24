@@ -1,4 +1,4 @@
-import { Session, StrengthPR, WodRecord, AggregatedExercise, ManualStrengthPR } from '../types';
+import { Session, StrengthPR, WodRecord, AggregatedExercise, ManualStrengthPR, WodRecoveryPoint } from '../types';
 import { listSessions } from './dynamodb';
 import { listManualRecords } from './manualRecords';
 import { estimate1RM } from '../utils/formulas';
@@ -223,4 +223,55 @@ export async function getAggregatedStrength(userId: string): Promise<AggregatedE
   result.sort((a, b) => a.exercise.toLowerCase().localeCompare(b.exercise.toLowerCase()));
 
   return result;
+}
+
+/**
+ * Every WOD with a measured 2-minute heart-rate recovery, oldest first.
+ * Includes sessions (any status, since the WOD is often filled in before the
+ * session is finished) and manual WOD records.
+ */
+export async function getWodRecovery(userId: string): Promise<WodRecoveryPoint[]> {
+  const [sessions, manual] = await Promise.all([
+    listSessions(userId),
+    listManualRecords(userId, 'wod'),
+  ]);
+
+  const points: WodRecoveryPoint[] = [];
+  const withDrop = (max: number | undefined, rec: number): number | undefined =>
+    max !== undefined && max > 0 ? max - rec : undefined;
+
+  for (const s of sessions) {
+    const rec = s.wod?.recoveryHeartRate2min;
+    if (!rec) continue;
+    points.push({
+      date: s.date,
+      source: 'session',
+      name: s.wod.name?.trim() || 'WOD',
+      sessionId: s.id,
+      ...(s.wod.timeSeconds !== undefined && { timeSeconds: s.wod.timeSeconds }),
+      ...(s.wod.rpe !== undefined && { rpe: s.wod.rpe }),
+      ...(s.wod.maxHeartRate !== undefined && { maxHeartRate: s.wod.maxHeartRate }),
+      recoveryHeartRate2min: rec,
+      ...(withDrop(s.wod.maxHeartRate, rec) !== undefined && { drop: withDrop(s.wod.maxHeartRate, rec) }),
+    });
+  }
+
+  for (const r of manual) {
+    if (r.type !== 'wod' || !r.recoveryHeartRate2min) continue;
+    const rec = r.recoveryHeartRate2min;
+    points.push({
+      date: r.date,
+      source: 'manual',
+      name: r.name.trim() || 'WOD',
+      recordId: r.id,
+      ...(r.timeSeconds !== undefined && { timeSeconds: r.timeSeconds }),
+      ...(r.rpe !== undefined && { rpe: r.rpe }),
+      ...(r.maxHeartRate !== undefined && { maxHeartRate: r.maxHeartRate }),
+      recoveryHeartRate2min: rec,
+      ...(withDrop(r.maxHeartRate, rec) !== undefined && { drop: withDrop(r.maxHeartRate, rec) }),
+    });
+  }
+
+  points.sort((a, b) => a.date.localeCompare(b.date));
+  return points;
 }

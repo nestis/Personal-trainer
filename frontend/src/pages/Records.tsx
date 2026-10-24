@@ -6,6 +6,7 @@ import Spinner from '../components/Spinner';
 import PageHeader from '../components/PageHeader';
 import Segmented from '../components/Segmented';
 import TimeInput from '../components/TimeInput';
+import RpeInput from '../components/RpeInput';
 import Toast from '../components/Toast';
 import ConfirmDialog from '../components/ConfirmDialog';
 import { useToast } from '../hooks/useToast';
@@ -442,6 +443,8 @@ interface WodFormState {
   date: string;
   avgHR: string;
   maxHR: string;
+  rpe: string;
+  recovery: string;
   notes: string;
 }
 
@@ -562,7 +565,7 @@ function Records() {
   const [sortBy, setSortBy] = useState<'recent' | 'name' | 'strength'>('recent');
 
   const [strengthForm, setStrengthForm] = useState<StrengthFormState>({ exercise: '', reps: '', kilos: '', date: today, notes: '' });
-  const [wodForm, setWodForm] = useState<WodFormState>({ name: '', desc: '', time: '', reps: '', date: today, avgHR: '', maxHR: '', notes: '' });
+  const [wodForm, setWodForm] = useState<WodFormState>({ name: '', desc: '', time: '', reps: '', date: today, avgHR: '', maxHR: '', rpe: '', recovery: '', notes: '' });
   const [sSaving, setSSaving] = useState(false);
   const [wSaving, setWSaving] = useState(false);
   const { toast, showToast, dismissToast } = useToast();
@@ -643,6 +646,8 @@ function Records() {
         totalReps: wodForm.reps ? parseInt(wodForm.reps) : undefined,
         avgHeartRate: wodForm.avgHR ? parseInt(wodForm.avgHR) : undefined,
         maxHeartRate: wodForm.maxHR ? parseInt(wodForm.maxHR) : undefined,
+        rpe: wodForm.rpe ? parseFloat(wodForm.rpe) : undefined,
+        recoveryHeartRate2min: wodForm.recovery ? parseInt(wodForm.recovery) : undefined,
         date: wodForm.date, notes: wodForm.notes || undefined,
       };
 
@@ -654,7 +659,7 @@ function Records() {
         await api.createManualWodRecord(data);
         showToast('WOD record added!');
       }
-      setWodForm({ name: '', desc: '', time: '', reps: '', date: today, avgHR: '', maxHR: '', notes: '' });
+      setWodForm({ name: '', desc: '', time: '', reps: '', date: today, avgHR: '', maxHR: '', rpe: '', recovery: '', notes: '' });
       setShowWodForm(false);
       api.listManualRecords().then(setManualRecords).catch(() => {});
     } catch (err) {
@@ -671,6 +676,8 @@ function Records() {
       date: r.date,
       avgHR: r.avgHeartRate ? String(r.avgHeartRate) : '',
       maxHR: r.maxHeartRate ? String(r.maxHeartRate) : '',
+      rpe: r.rpe ? String(r.rpe) : '',
+      recovery: r.recoveryHeartRate2min ? String(r.recoveryHeartRate2min) : '',
       notes: r.notes || '',
     });
     setEditingWodId(r.id);
@@ -932,6 +939,8 @@ function Records() {
                   {r.timeSeconds && r.totalReps ? <span>{r.totalReps} rounds</span> : null}
                   {r.avgHeartRate && <span>Avg {r.avgHeartRate} bpm</span>}
                   {r.maxHeartRate && <span>Max {r.maxHeartRate} bpm</span>}
+                  {r.rpe && <span>RPE {r.rpe}</span>}
+                  {r.recoveryHeartRate2min && <span>2 min: {r.recoveryHeartRate2min} bpm{r.maxHeartRate ? ` (−${r.maxHeartRate - r.recoveryHeartRate2min})` : ''}</span>}
                 </div>
                 {r.notes && <div style={s.note}>{r.notes}</div>}
               </div>
@@ -975,12 +984,23 @@ function Records() {
                   <input className="input input-sm" type="number" inputMode="numeric" placeholder="bpm" value={wodForm.maxHR} onChange={(e) => setWodForm({ ...wodForm, maxHR: e.target.value })} />
                 </div>
               </div>
+              <div style={s.formRow}>
+                <div style={s.formField}>
+                  <RpeInput label="RPE" value={wodForm.rpe ? parseFloat(wodForm.rpe) : undefined} onChange={(v) => setWodForm({ ...wodForm, rpe: v === undefined ? '' : String(v) })} />
+                </div>
+              </div>
+              <div style={s.formRow}>
+                <div style={s.formField}>
+                  <label className="label">HR after 2 min</label>
+                  <input className="input input-sm" type="number" inputMode="numeric" placeholder="bpm" value={wodForm.recovery} onChange={(e) => setWodForm({ ...wodForm, recovery: e.target.value })} />
+                </div>
+              </div>
               <div style={{ marginBottom: 4 }}>
                 <label className="label">Notes</label>
                 <input className="input input-sm" placeholder="Optional" value={wodForm.notes} onChange={(e) => setWodForm({ ...wodForm, notes: e.target.value })} />
               </div>
               <div style={s.formActions}>
-                <button className="btn btn-secondary btn-sm" onClick={() => { setShowWodForm(false); setEditingWodId(null); setWodForm({ name: '', desc: '', time: '', reps: '', date: today, avgHR: '', maxHR: '', notes: '' }); }} style={{ flex: 1 }}>Cancel</button>
+                <button className="btn btn-secondary btn-sm" onClick={() => { setShowWodForm(false); setEditingWodId(null); setWodForm({ name: '', desc: '', time: '', reps: '', date: today, avgHR: '', maxHR: '', rpe: '', recovery: '', notes: '' }); }} style={{ flex: 1 }}>Cancel</button>
                 <button className="btn btn-primary btn-sm" onClick={handleAddWodRecord} disabled={wSaving || !wodForm.name || (!wodForm.time && !wodForm.reps)} style={{ flex: 2 }}>
                   {wSaving ? 'Saving...' : editingWodId ? 'Update' : 'Save'}
                 </button>
