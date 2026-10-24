@@ -1,10 +1,11 @@
-import { useEffect, useState, useCallback, useMemo } from 'react';
+import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { HrvRecord } from '../types';
 import { api } from '../services/api';
 import { formatDayLabel, parseLocalDate, toDateString } from '../utils/format';
 import PageHeader from '../components/PageHeader';
 import Segmented from '../components/Segmented';
 import RecoveryView from '../components/RecoveryView';
+import AutoTextarea from '../components/AutoTextarea';
 import Spinner from '../components/Spinner';
 import Toast from '../components/Toast';
 import ConfirmDialog from '../components/ConfirmDialog';
@@ -16,7 +17,15 @@ const COLORS = {
   min: '#30d158',
 };
 
-const WINDOW_DAYS = 14;
+type RangeKey = '2w' | '3m' | 'all';
+
+const RANGES: Record<RangeKey, { days: number | null; label: string; stat: string; prev: string }> = {
+  '2w': { days: 14, label: '2 weeks', stat: '2-week average', prev: 'previous 2 weeks' },
+  '3m': { days: 91, label: '3 months', stat: '3-month average', prev: 'previous 3 months' },
+  all: { days: null, label: 'All', stat: 'Average of all readings', prev: '' },
+};
+
+const PAGE_SIZE = 30;
 
 const s: Record<string, React.CSSProperties> = {
   page: {
@@ -184,11 +193,9 @@ function dayIndex(date: string, start: string): number {
   return Math.round((parseLocalDate(date).getTime() - parseLocalDate(start).getTime()) / 86400000);
 }
 
-function HrvChart({ records, start }: { records: HrvRecord[]; start: string }) {
+function HrvChart({ records, start, end, emptyHint }: { records: HrvRecord[]; start: string; end: string; emptyHint: string }) {
   if (records.length === 0) {
-    return (
-      <div style={s.empty}>No data yet. Save your first reading above.</div>
-    );
+    return <div style={s.empty}>{emptyHint}</div>;
   }
 
   const sorted = [...records].sort((a, b) => a.date.localeCompare(b.date));
@@ -202,7 +209,8 @@ function HrvChart({ records, start }: { records: HrvRecord[]; start: string }) {
   const PAD_X = 8;
   const PAD_T = 8;
   const PAD_B = 8;
-  const toX = (date: string) => PAD_X + (dayIndex(date, start) / (WINDOW_DAYS - 1)) * (W - PAD_X * 2);
+  const span = Math.max(2, dayIndex(end, start) + 1);
+  const toX = (date: string) => PAD_X + (dayIndex(date, start) / (span - 1)) * (W - PAD_X * 2);
   const toY = (v: number) => PAD_T + (H - PAD_T - PAD_B) * (1 - (v - lo) / range);
 
   const upper = sorted.map((r) => `${toX(r.date).toFixed(1)},${toY(r.max).toFixed(1)}`);
@@ -210,9 +218,10 @@ function HrvChart({ records, start }: { records: HrvRecord[]; start: string }) {
   const avgPts = sorted.map((r) => `${toX(r.date).toFixed(1)},${toY(r.avg).toFixed(1)}`).join(' ');
   const last = sorted[sorted.length - 1];
 
-  const label = (d: string) => parseLocalDate(d).toLocaleDateString('en-US', { day: 'numeric', month: 'short' });
-  const mid = getDaysAgo(Math.round((WINDOW_DAYS - 1) / 2));
-  const end = getDaysAgo(0);
+  const label = (d: string, withYear = false) =>
+    parseLocalDate(d).toLocaleDateString('en-US', { day: 'numeric', month: 'short', ...(withYear && { year: '2-digit' }) });
+  const midDate = toDateString(new Date(parseLocalDate(start).getTime() + ((span - 1) / 2) * 86400000));
+  const long = span > 150;
 
   return (
     <div>
@@ -220,7 +229,7 @@ function HrvChart({ records, start }: { records: HrvRecord[]; start: string }) {
         viewBox={`0 0 ${W} ${H}`}
         style={{ width: '100%', display: 'block', marginTop: 8 }}
         role="img"
-        aria-label={`Daily HRV for the last ${WINDOW_DAYS} days. Latest average ${last.avg}, range ${last.min} to ${last.max}.`}
+        aria-label={`Daily HRV from ${start} to ${end}. Latest average ${last.avg}, range ${last.min} to ${last.max}.`}
       >
         {sorted.length > 1 && <polygon points={[...upper, ...lower].join(' ')} fill="rgba(10,132,255,0.2)" />}
         {sorted.length === 1 && (
@@ -230,9 +239,9 @@ function HrvChart({ records, start }: { records: HrvRecord[]; start: string }) {
         <circle cx={toX(last.date)} cy={toY(last.avg)} r="4" fill={COLORS.avg} />
       </svg>
       <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4, fontSize: 11, color: 'var(--text-secondary)' }}>
-        <span>{label(start)}</span>
-        <span>{label(mid)}</span>
-        <span>{label(end)}</span>
+        <span>{label(start, long)}</span>
+        <span>{label(midDate, long)}</span>
+        <span>{label(end, long)}</span>
       </div>
       <div style={s.legend}>
         <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -257,6 +266,7 @@ function HrvView() {
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
 
   const [formDate, setFormDate] = useState(toDateString(new Date()));
+  const [pickedId, setPickedId] = useState<string | null>(null);
   const [formMin, setFormMin] = useState('');
   const [formMax, setFormMax] = useState('');
   const [formAvg, setFormAvg] = useState('');
@@ -264,52 +274,74 @@ function HrvView() {
   const [showNote, setShowNote] = useState(false);
   const [saving, setSaving] = useState(false);
   const [version, setVersion] = useState(0);
+  const [range, setRange] = useState<RangeKey>('2w');
+  const [shown, setShown] = useState(PAGE_SIZE);
+  const initDone = useRef(false);
 
-  const windowStart = getDaysAgo(WINDOW_DAYS - 1);
-  // 28 days: the last two weeks plus the two weeks before, for the comparison
-  const fetchStart = getDaysAgo(WINDOW_DAYS * 2 - 1);
+  const today = toDateString(new Date());
 
+  // All readings are loaded (a few hundred small records at most), so any range can be shown
   const loadRecords = useCallback(async () => {
     try {
-      const data = await api.listHrvRecords(fetchStart);
+      const data = await api.listHrvRecords();
       setRecords(data);
       setVersion((v) => v + 1);
+      if (!initDone.current) {
+        initDone.current = true;
+        // Fewer than 3 readings in the last 2 weeks: open on a longer range so the history is visible
+        if (data.filter((r) => r.date >= getDaysAgo(13)).length < 3) setRange('3m');
+      }
     } catch {
       showToast('Failed to load HRV data', 'error');
     } finally {
       setLoading(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [fetchStart]);
+  }, []);
 
   useEffect(() => {
     document.title = 'HRV - Workout Tracker';
     loadRecords();
   }, [loadRecords]);
 
-  const existing = useMemo(() => records.find((r) => r.date === formDate) || null, [records, formDate]);
+  // The tapped record, else the first one saved for the chosen date
+  const existing = useMemo(
+    () => records.find((r) => r.id === pickedId) || records.find((r) => r.date === formDate) || null,
+    [records, formDate, pickedId]
+  );
 
-  // Fill the form from the saved reading for the chosen date (or clear it)
+  // Fill the form from that reading (or clear it)
   useEffect(() => {
-    const r = records.find((x) => x.date === formDate);
+    const r = existing;
     setFormMin(r ? String(r.min) : '');
     setFormMax(r ? String(r.max) : '');
     setFormAvg(r ? String(r.avg) : '');
     setFormNotes(r?.notes || '');
     setShowNote(Boolean(r?.notes));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [formDate, version]);
+  }, [formDate, version, pickedId]);
 
   const previous = useMemo(
     () => [...records].filter((r) => r.date < formDate).sort((a, b) => b.date.localeCompare(a.date))[0] || null,
     [records, formDate]
   );
 
+  const cfg = RANGES[range];
+  const earliest = useMemo(
+    () => (records.length ? records.reduce((m, r) => (r.date < m ? r.date : m), records[0].date) : today),
+    [records, today]
+  );
+  const windowStart = cfg.days ? getDaysAgo(cfg.days - 1) : earliest;
   const current = useMemo(() => records.filter((r) => r.date >= windowStart), [records, windowStart]);
-  const before = useMemo(() => records.filter((r) => r.date < windowStart), [records, windowStart]);
+  const rangeDays = cfg.days;
+  const before = useMemo(
+    () => (rangeDays ? records.filter((r) => r.date < windowStart && r.date >= getDaysAgo(rangeDays * 2 - 1)) : []),
+    [records, windowStart, rangeDays]
+  );
   const currentAvg = avgOf(current);
   const beforeAvg = avgOf(before);
   const delta = currentAvg !== null && beforeAvg !== null ? Math.round((currentAvg - beforeAvg) * 10) / 10 : null;
+  const latestDate = useMemo(() => [...records].sort((a, b) => b.date.localeCompare(a.date))[0]?.date, [records]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -352,6 +384,7 @@ function HrvView() {
     try {
       await api.deleteHrvRecord(confirmDelete);
       showToast('Deleted');
+      if (pickedId === confirmDelete) setPickedId(null);
       setConfirmDelete(null);
       await loadRecords();
     } catch {
@@ -360,19 +393,22 @@ function HrvView() {
   };
 
   const edit = (r: HrvRecord) => {
+    setPickedId(r.id);
     setFormDate(r.date);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   if (loading) return <div style={{ paddingTop: 60 }}><Spinner /></div>;
 
-  const recent = [...current].sort((a, b) => b.date.localeCompare(a.date));
-  const today = toDateString(new Date());
+  const history = [...current].sort((a, b) => b.date.localeCompare(a.date) || b.createdAt.localeCompare(a.createdAt));
   const fields: { key: 'min' | 'avg' | 'max'; value: string; set: (v: string) => void }[] = [
     { key: 'min', value: formMin, set: setFormMin },
     { key: 'avg', value: formAvg, set: setFormAvg },
     { key: 'max', value: formMax, set: setFormMax },
   ];
+  const emptyHint = latestDate
+    ? `No readings in this range. Your latest is from ${formatDayLabel(latestDate)}; try a longer range.`
+    : 'No data yet. Save your first reading above.';
 
   return (
     <div style={s.page} className="fade-in">
@@ -387,7 +423,12 @@ function HrvView() {
               aria-label="Date"
               value={formDate}
               max={today}
-              onChange={(e) => e.target.value && setFormDate(e.target.value)}
+              onChange={(e) => {
+                if (e.target.value) {
+                  setPickedId(null);
+                  setFormDate(e.target.value);
+                }
+              }}
             />
           </div>
 
@@ -414,15 +455,16 @@ function HrvView() {
           </div>
 
           {showNote ? (
-            <input
-              className="input input-sm"
-              style={{ marginTop: 8 }}
-              type="text"
-              placeholder="e.g. slept well, stressed…"
-              aria-label="Note"
-              value={formNotes}
-              onChange={(e) => setFormNotes(e.target.value)}
-            />
+            <div style={{ marginTop: 8 }}>
+              <AutoTextarea
+                label="Note"
+                value={formNotes}
+                onChange={setFormNotes}
+                minRows={2}
+                maxLength={500}
+                placeholder="e.g. slept well, stressed…"
+              />
+            </div>
           ) : (
             <button type="button" style={s.linkBtn} onClick={() => setShowNote(true)}>
               + Add note
@@ -440,13 +482,25 @@ function HrvView() {
         </form>
       </section>
 
-      <section style={s.card} aria-label="Two-week average">
-        <div style={s.statLabel}>2-week average</div>
+      <div style={{ marginBottom: 12 }}>
+        <Segmented
+          label="Range"
+          value={range}
+          onChange={(r) => {
+            setRange(r);
+            setShown(PAGE_SIZE);
+          }}
+          options={(Object.keys(RANGES) as RangeKey[]).map((k) => ({ value: k, label: RANGES[k].label }))}
+        />
+      </div>
+
+      <section style={s.card} aria-label="Average">
+        <div style={s.statLabel}>{cfg.stat}</div>
         {currentAvg !== null ? (
           <div style={s.statRow}>
             <span style={s.statValue}>{currentAvg.toFixed(1)}</span>
             <span style={{ fontSize: 17, color: 'var(--text-secondary)' }}>ms</span>
-            {delta !== null && (
+            {delta !== null && cfg.prev && (
               <span
                 style={{
                   marginLeft: 'auto',
@@ -455,32 +509,42 @@ function HrvView() {
                   color: delta > 0 ? 'var(--green)' : delta < 0 ? 'var(--orange)' : 'var(--text-secondary)',
                 }}
               >
-                {delta > 0 ? `▲ ${delta}` : delta < 0 ? `▼ ${-delta}` : 'No change'} vs previous 2 weeks
+                {delta > 0 ? `▲ ${delta}` : delta < 0 ? `▼ ${-delta}` : 'No change'} vs {cfg.prev}
               </span>
             )}
           </div>
         ) : (
           <div style={{ ...s.statValue, color: 'var(--text-secondary)' }}>–</div>
         )}
-        <HrvChart records={current} start={windowStart} />
+        <div style={{ fontSize: 13, color: 'var(--text-secondary)', marginTop: 2 }}>
+          {current.length} reading{current.length === 1 ? '' : 's'}
+        </div>
+        <HrvChart records={current} start={windowStart} end={today} emptyHint={emptyHint} />
       </section>
 
-      {recent.length > 0 && (
-        <section aria-label="Recent readings">
-          <div style={s.sectionLabel}>Recent · tap to edit, swipe to delete</div>
+      {history.length > 0 && (
+        <section aria-label="Readings">
+          <div style={s.sectionLabel}>History · tap to edit, swipe to delete</div>
           <div style={s.list}>
-            {recent.map((r, i) => (
+            {history.slice(0, shown).map((r, i) => (
               <div key={r.id}>
                 {i > 0 && <div style={s.sep} />}
                 <div style={s.swipe} className="swipe-row">
                   <button
                     type="button"
-                    style={{ ...s.rowBtn, background: r.date === formDate ? 'var(--fill-secondary)' : 'none' }}
+                    style={{ ...s.rowBtn, background: r.id === existing?.id ? 'var(--fill-secondary)' : 'none' }}
                     onClick={() => edit(r)}
                     aria-label={`Edit reading for ${formatDayLabel(r.date)}`}
                   >
-                    <span>{formatDayLabel(r.date)}</span>
-                    <span style={{ fontSize: 15, color: 'var(--text-secondary)', fontVariantNumeric: 'tabular-nums' }}>
+                    <span style={{ minWidth: 0, flex: 1 }}>
+                      <span style={{ display: 'block' }}>{formatDayLabel(r.date)}</span>
+                      {r.notes && (
+                        <span style={{ display: 'block', marginTop: 2, fontSize: 13, color: 'var(--text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          {r.notes}
+                        </span>
+                      )}
+                    </span>
+                    <span style={{ fontSize: 15, color: 'var(--text-secondary)', fontVariantNumeric: 'tabular-nums', flexShrink: 0, marginLeft: 12 }}>
                       <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{r.avg}</span> avg · {r.min}–{r.max}
                     </span>
                   </button>
@@ -496,6 +560,11 @@ function HrvView() {
               </div>
             ))}
           </div>
+          {history.length > shown && (
+            <button type="button" className="btn btn-secondary btn-block" style={{ marginTop: 12 }} onClick={() => setShown((n) => n + PAGE_SIZE)}>
+              Show more ({history.length - shown} older)
+            </button>
+          )}
         </section>
       )}
 
