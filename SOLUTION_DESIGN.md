@@ -261,7 +261,9 @@ The MCP server runs on Cloudflare Workers and acts as a bridge between Claude.ai
 | `get_sessions` | List sessions with date range filter |
 | `get_session` | Get single session by ID |
 | `create_session` | Create a planned workout session |
-| `update_session` | Update session (mark complete, edit) |
+| `update_session` | Update session (edit, status) |
+| `set_session_status` | Mark a session completed / not completed |
+| `delete_session` | Permanently delete a session (requires `confirm: true`) |
 | `get_strength_prs` | All computed strength PRs |
 | `get_wod_records` | All WOD records with history |
 | `get_manual_records` | Manual records with type filter |

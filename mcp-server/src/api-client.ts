@@ -131,6 +131,9 @@ export class ApiClient {
       throw new Error(`API request failed (${res.status})`);
     }
 
+    // Successful deletes reply 204 with no body
+    if (res.status === 204) return undefined as T;
+
     return res.json() as Promise<T>;
   }
 
@@ -171,6 +174,11 @@ export class ApiClient {
       method: 'PUT',
       body: JSON.stringify(data),
     });
+  }
+
+  async deleteSession(id: string): Promise<void> {
+    this.assertSafePathSegment(id);
+    await this.request<void>(`/api/sessions/${id}`, { method: 'DELETE' });
   }
 
   async getStrengthPRs(): Promise<StrengthPR[]> {
