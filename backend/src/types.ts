@@ -114,8 +114,12 @@ export type ManualRecord = ManualStrengthPR | ManualWodRecord;
 // Aggregated strength data (combines session + manual records)
 export interface AggregatedExercise {
   exercise: string;
+  // The current max: the best entry of the last 6 weeks, or the latest reading if there is none
   estimated1RM: number;
   bestSet: { reps: number; kilos: number; date: string };
+  basis: 'last6weeks' | 'latest';
+  // The best entry ever, for reference
+  allTimeBest: { estimated1RM: number; reps: number; kilos: number; date: string };
   history: { date: string; estimated1RM: number; reps: number; kilos: number }[];
 }
 
