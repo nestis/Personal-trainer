@@ -86,6 +86,13 @@ export interface ManualWodRecord {
 
 export type ManualRecord = ManualStrengthPR | ManualWodRecord;
 
+export interface AggregatedExercise {
+  exercise: string;
+  estimated1RM: number;
+  bestSet: { reps: number; kilos: number; date: string };
+  history: { date: string; estimated1RM: number; reps: number; kilos: number }[];
+}
+
 export interface HrvRecord {
   id: string;
   date: string;

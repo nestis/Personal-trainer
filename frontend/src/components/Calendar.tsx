@@ -14,13 +14,11 @@ const DAY_LABELS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
 
 function getCalendarDays(year: number, month: number): Date[] {
   const first = new Date(year, month, 1);
-  // Monday-based offset: getDay() returns 0=Sun, so (day + 6) % 7 gives 0=Mon
   const startOffset = (first.getDay() + 6) % 7;
   const days: Date[] = [];
   for (let i = -startOffset; i < 42; i++) {
     days.push(new Date(year, month, 1 + i));
   }
-  // Trim trailing row if entirely outside current month
   while (days.length > 35) {
     const lastRow = days.slice(-7);
     if (lastRow.every((d) => d.getMonth() !== month)) {
@@ -36,17 +34,17 @@ const s: Record<string, React.CSSProperties> = {
   container: {
     background: 'var(--bg-grouped-secondary)',
     borderRadius: 'var(--radius)',
-    padding: '8px 6px 6px',
-    boxShadow: '0 1px 3px rgba(0,0,0,0.3), 0 4px 12px rgba(0,0,0,0.15)',
+    padding: '10px 8px 8px',
+    boxShadow: 'var(--shadow-card)',
   },
   header: {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: '0 6px 6px',
+    padding: '0 8px 8px',
   },
   monthTitle: {
-    fontSize: 15,
+    fontSize: 17,
     fontWeight: 600,
     letterSpacing: -0.2,
   },
@@ -54,12 +52,14 @@ const s: Record<string, React.CSSProperties> = {
     background: 'none',
     border: 'none',
     color: 'var(--tint)',
-    padding: 6,
+    padding: 8,
     cursor: 'pointer',
     borderRadius: 'var(--radius-xs)',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
+    minWidth: 44,
+    minHeight: 44,
   },
   grid: {
     display: 'grid',
@@ -68,11 +68,11 @@ const s: Record<string, React.CSSProperties> = {
     textAlign: 'center' as const,
   },
   dayLabel: {
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: 600,
     color: 'var(--text-tertiary)',
     textTransform: 'uppercase' as const,
-    padding: '2px 0 4px',
+    padding: '4px 0 6px',
   },
   dayCell: {
     display: 'flex',
@@ -82,14 +82,14 @@ const s: Record<string, React.CSSProperties> = {
     padding: '2px 0',
     cursor: 'pointer',
     borderRadius: 'var(--radius-xs)',
-    minHeight: 34,
+    minHeight: 38,
   },
   dayNumber: {
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: 400,
-    width: 26,
-    height: 26,
-    lineHeight: '26px',
+    width: 28,
+    height: 28,
+    lineHeight: '28px',
     textAlign: 'center' as const,
     borderRadius: '50%',
     transition: 'background 0.15s ease',

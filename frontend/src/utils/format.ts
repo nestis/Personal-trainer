@@ -20,6 +20,35 @@ export function formatDate(dateStr: string): string {
   return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
+/** "Thu 22 Oct", or "Today" / "Yesterday" / "Tomorrow" */
+export function formatDayLabel(dateStr: string, now: Date = new Date()): string {
+  const today = toDateString(now);
+  if (dateStr === today) return 'Today';
+  const diff = Math.round(
+    (parseLocalDate(dateStr).getTime() - parseLocalDate(today).getTime()) / 86400000
+  );
+  if (diff === -1) return 'Yesterday';
+  if (diff === 1) return 'Tomorrow';
+  return parseLocalDate(dateStr).toLocaleDateString('en-US', {
+    weekday: 'short',
+    day: 'numeric',
+    month: 'short',
+  });
+}
+
+/** Monday of the week containing d (local time) */
+export function startOfWeek(d: Date): Date {
+  const copy = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  copy.setDate(copy.getDate() - ((copy.getDay() + 6) % 7));
+  return copy;
+}
+
+export function addDays(d: Date, n: number): Date {
+  const copy = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  copy.setDate(copy.getDate() + n);
+  return copy;
+}
+
 export function toDateString(d: Date): string {
   const y = d.getFullYear();
   const m = String(d.getMonth() + 1).padStart(2, '0');

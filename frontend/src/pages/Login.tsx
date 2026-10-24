@@ -10,16 +10,29 @@ const s: Record<string, React.CSSProperties> = {
     minHeight: 'calc(100dvh - 80px)',
     padding: '40px 0',
   },
+  iconWrap: {
+    width: 80,
+    height: 80,
+    borderRadius: 20,
+    background: 'var(--gradient-blue)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 24,
+    boxShadow: '0 4px 20px rgba(10, 132, 255, 0.3)',
+  },
   title: {
-    fontSize: 28,
+    fontSize: 34,
     fontWeight: 700,
-    letterSpacing: -0.6,
-    marginBottom: 4,
+    letterSpacing: -0.7,
+    marginBottom: 6,
+    lineHeight: 1.1,
   },
   subtitle: {
-    fontSize: 15,
+    fontSize: 17,
     color: 'var(--text-secondary)',
-    marginBottom: 32,
+    marginBottom: 36,
+    lineHeight: 1.3,
   },
   form: {
     display: 'flex',
@@ -27,11 +40,11 @@ const s: Record<string, React.CSSProperties> = {
     gap: 14,
   },
   error: {
-    fontSize: 14,
+    fontSize: 15,
     color: 'var(--red)',
-    padding: '10px 14px',
+    padding: '12px 16px',
     background: 'rgba(255, 69, 58, 0.12)',
-    borderRadius: 'var(--radius-xs)',
+    borderRadius: 'var(--radius-sm)',
   },
 };
 
@@ -58,6 +71,15 @@ function Login() {
 
   return (
     <div style={s.page} className="fade-in">
+      <div style={s.iconWrap}>
+        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="2" y="7" width="20" height="10" rx="2" />
+          <line x1="12" y1="3" x2="12" y2="7" />
+          <line x1="12" y1="17" x2="12" y2="21" />
+          <line x1="7" y1="7" x2="7" y2="17" />
+          <line x1="17" y1="7" x2="17" y2="17" />
+        </svg>
+      </div>
       <div style={s.title}>Workout Tracker</div>
       <div style={s.subtitle}>Enter your password to continue</div>
 

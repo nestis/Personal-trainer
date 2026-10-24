@@ -1,16 +1,26 @@
-import { useEffect, useState, useCallback } from 'react';
-import { StrengthPR, WodRecord, ManualStrengthPR, ManualWodRecord, ManualRecord } from '../types';
+import { useEffect, useState, useCallback, useMemo } from 'react';
+import { AggregatedExercise, WodRecord, ManualWodRecord, ManualRecord } from '../types';
 import { api } from '../services/api';
 import { formatTime, parseTime, formatDate } from '../utils/format';
 import Spinner from '../components/Spinner';
+import PageHeader from '../components/PageHeader';
+import Segmented from '../components/Segmented';
+import TimeInput from '../components/TimeInput';
 import Toast from '../components/Toast';
 import ConfirmDialog from '../components/ConfirmDialog';
 import { useToast } from '../hooks/useToast';
 
 const s: Record<string, React.CSSProperties> = {
   page: {
-    paddingTop: 20,
-    paddingBottom: 40,
+    paddingTop: 'calc(var(--safe-top) + 8px)',
+    paddingBottom: 'calc(var(--tab-bar-height) + var(--safe-bottom) + 24px)',
+  },
+  title: {
+    fontSize: 34,
+    fontWeight: 700,
+    letterSpacing: -0.7,
+    marginBottom: 20,
+    lineHeight: 1.1,
   },
   segmented: {
     display: 'flex',
@@ -31,6 +41,7 @@ const s: Record<string, React.CSSProperties> = {
     cursor: 'pointer',
     borderRadius: 7,
     transition: 'all 0.2s ease',
+    minHeight: 36,
   },
   segActive: {
     flex: 1,
@@ -44,6 +55,7 @@ const s: Record<string, React.CSSProperties> = {
     borderRadius: 7,
     boxShadow: '0 1px 4px rgba(0,0,0,0.3)',
     transition: 'all 0.2s ease',
+    minHeight: 36,
   },
   sectionLabel: {
     fontSize: 13,
@@ -64,57 +76,235 @@ const s: Record<string, React.CSSProperties> = {
     marginBottom: 8,
     paddingLeft: 4,
   },
-  group: {
-    marginBottom: 12,
-    overflow: 'hidden',
+  // Exercise list
+  searchWrap: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 8,
+    minHeight: 40,
+    padding: '0 12px',
+    marginBottom: 4,
+    background: 'var(--bg-grouped-secondary)',
+    borderRadius: 10,
+    color: 'var(--text-secondary)',
   },
-  manualGroup: {
-    marginBottom: 12,
+  searchInput: {
+    flex: 1,
+    minWidth: 0,
+    minHeight: 40,
+    background: 'transparent',
+    border: 'none',
+    outline: 'none',
+    color: 'var(--text-primary)',
+    fontSize: 17,
+  },
+  listMeta: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    minHeight: 36,
+    padding: '0 4px',
+    fontSize: 13,
+    color: 'var(--text-secondary)',
+  },
+  sortSelect: {
+    appearance: 'none' as const,
+    background: 'transparent',
+    border: 'none',
+    color: 'var(--tint)',
+    fontSize: 13,
+    minHeight: 36,
+    padding: '0 4px',
+    cursor: 'pointer',
+    textAlign: 'right' as const,
+  },
+  rowsCard: {
+    background: 'var(--bg-grouped-secondary)',
+    borderRadius: 16,
     overflow: 'hidden',
-    borderLeft: '3px solid var(--indigo)',
+    marginBottom: 12,
+  },
+  rowBtn: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 10,
+    width: '100%',
+    minHeight: 80,
+    padding: '10px 16px',
+    background: 'none',
+    border: 'none',
+    color: 'inherit',
+    textAlign: 'left' as const,
+    cursor: 'pointer',
+    WebkitTapHighlightColor: 'transparent',
+  },
+  rowSep: {
+    height: '0.5px',
+    background: 'var(--separator)',
+    marginLeft: 16,
+  },
+  newBadge: {
+    fontSize: 10,
+    fontWeight: 700,
+    letterSpacing: 0.5,
+    padding: '2px 6px',
+    borderRadius: 6,
+    background: 'rgba(48, 209, 88, 0.18)',
+    color: 'var(--green)',
+  },
+  rowValue: {
+    minWidth: 76,
+    textAlign: 'right' as const,
+    flexShrink: 0,
+  },
+  rowBig: {
+    fontSize: 20,
+    fontWeight: 700,
+    fontVariantNumeric: 'tabular-nums',
+  },
+  rowTrend: {
+    fontSize: 12,
+    fontWeight: 600,
+    marginTop: 1,
+  },
+  // Exercise cards
+  exerciseCard: {
+    marginBottom: 10,
+    cursor: 'pointer',
+    transition: 'transform 0.1s ease',
+    WebkitTapHighlightColor: 'transparent',
+  },
+  cardRow: {
+    display: 'flex',
+    alignItems: 'center',
+  },
+  cardContent: {
+    flex: 1,
+    minWidth: 0,
   },
   exerciseName: {
     fontSize: 17,
     fontWeight: 600,
     letterSpacing: -0.2,
-    marginBottom: 2,
+    marginBottom: 4,
   },
   est1rm: {
+    fontSize: 14,
+    color: 'var(--tint)',
+    fontWeight: 600,
+    marginBottom: 4,
+  },
+  bestSet: {
+    fontSize: 14,
+    color: 'var(--text-secondary)',
+  },
+  chevron: {
+    color: 'var(--text-tertiary)',
+    flexShrink: 0,
+    marginLeft: 8,
+  },
+  // Detail view
+  backBtn: {
+    background: 'none',
+    border: 'none',
+    color: 'var(--tint)',
+    fontSize: 17,
+    fontWeight: 400,
+    cursor: 'pointer',
+    padding: '4px 0',
+    marginBottom: 12,
+    display: 'flex',
+    alignItems: 'center',
+    gap: 4,
+    minHeight: 44,
+  },
+  detailTitle: {
+    fontSize: 28,
+    fontWeight: 700,
+    letterSpacing: -0.6,
+    marginBottom: 16,
+  },
+  highlightCard: {
+    background: 'linear-gradient(135deg, rgba(10,132,255,0.15) 0%, rgba(94,92,230,0.1) 100%)',
+    borderRadius: 'var(--radius)',
+    padding: 20,
+    marginBottom: 20,
+    textAlign: 'center' as const,
+    boxShadow: '0 0 20px rgba(10,132,255,0.08)',
+  },
+  highlightLabel: {
+    fontSize: 13,
+    fontWeight: 400,
+    color: 'var(--text-secondary)',
+    textTransform: 'uppercase' as const,
+    letterSpacing: 0.5,
+    marginBottom: 4,
+  },
+  highlightValue: {
+    fontSize: 40,
+    fontWeight: 700,
+    color: 'var(--tint)',
+    letterSpacing: -1,
+    fontVariantNumeric: 'tabular-nums',
+  },
+  highlightUnit: {
+    fontSize: 15,
+    fontWeight: 500,
+    color: 'var(--text-secondary)',
+    marginTop: 2,
+  },
+  highlightSub: {
+    fontSize: 14,
+    color: 'var(--text-secondary)',
+    marginTop: 8,
+  },
+  chartCard: {
+    background: 'var(--bg-grouped-secondary)',
+    borderRadius: 'var(--radius)',
+    padding: 20,
+    boxShadow: 'var(--shadow-card)',
+    marginBottom: 20,
+  },
+  chartTitle: {
+    fontSize: 15,
+    fontWeight: 600,
+    marginBottom: 16,
+    letterSpacing: -0.2,
+    color: 'var(--text-secondary)',
+  },
+  svgContainer: { width: '100%', overflow: 'visible' },
+  historyRow: {
+    display: 'grid',
+    gridTemplateColumns: '60px 1fr 70px 64px',
+    gap: 8,
+    alignItems: 'center',
+    padding: '12px 0',
+    borderBottom: '0.5px solid var(--separator)',
+  },
+  historyReps: {
+    fontSize: 14,
+    fontWeight: 500,
+    color: 'var(--text-secondary)',
+  },
+  historyKg: {
+    fontSize: 16,
+    fontWeight: 600,
+    color: 'var(--text-primary)',
+  },
+  history1rm: {
     fontSize: 13,
     color: 'var(--tint)',
     fontWeight: 500,
-    marginBottom: 12,
-  },
-  prRow: {
-    display: 'grid',
-    gridTemplateColumns: '52px 1fr 80px',
-    gap: 8,
-    alignItems: 'center',
-    padding: '10px 0',
-  },
-  prRowDel: {
-    display: 'grid',
-    gridTemplateColumns: '52px 1fr 72px 28px',
-    gap: 8,
-    alignItems: 'center',
-    padding: '10px 0',
-  },
-  reps: {
-    fontSize: 15,
-    color: 'var(--text-secondary)',
-    fontWeight: 500,
-  },
-  kg: {
-    fontSize: 17,
-    fontWeight: 600,
+    textAlign: 'right' as const,
     fontVariantNumeric: 'tabular-nums',
   },
-  dateSmall: {
+  historyDate: {
     fontSize: 13,
     color: 'var(--text-tertiary)',
     textAlign: 'right' as const,
     fontVariantNumeric: 'tabular-nums',
   },
+  // WOD styles
   wodCard: {
     marginBottom: 12,
   },
@@ -198,10 +388,15 @@ const s: Record<string, React.CSSProperties> = {
     color: 'var(--red)',
     cursor: 'pointer',
     fontSize: 17,
-    padding: 0,
+    padding: 4,
     lineHeight: 1,
     opacity: 0.7,
     transition: 'opacity 0.15s',
+    minWidth: 44,
+    minHeight: 44,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   addBtn: {
     background: 'none',
@@ -215,10 +410,11 @@ const s: Record<string, React.CSSProperties> = {
     textAlign: 'center' as const,
     borderRadius: 'var(--radius)',
     transition: 'background 0.15s',
+    minHeight: 48,
   },
   empty: {
     textAlign: 'center' as const,
-    padding: '24px 20px',
+    padding: '32px 20px',
     color: 'var(--text-tertiary)',
     fontSize: 15,
   },
@@ -229,17 +425,6 @@ const s: Record<string, React.CSSProperties> = {
     marginTop: 2,
   },
 };
-
-function groupByExercise<T extends { exercise: string }>(items: T[]): Map<string, T[]> {
-  const map = new Map<string, T[]>();
-  for (const item of items) {
-    const key = item.exercise.toLowerCase();
-    const existing = map.get(key) || [];
-    existing.push(item);
-    map.set(key, existing);
-  }
-  return map;
-}
 
 interface StrengthFormState {
   exercise: string;
@@ -260,11 +445,109 @@ interface WodFormState {
   notes: string;
 }
 
+const DAY_MS = 86400000;
+
+function daysBetween(a: string, b: string): number {
+  return Math.round((new Date(b + 'T00:00:00').getTime() - new Date(a + 'T00:00:00').getTime()) / DAY_MS);
+}
+
+function fmt(n: number): string {
+  return String(Math.round(n * 10) / 10);
+}
+
+/** Change in estimated 1RM between the latest entry and the one ~30 days before it */
+function trendOf(ex: AggregatedExercise): number | null {
+  const h = ex.history;
+  if (h.length < 2) return null;
+  const latest = h[h.length - 1];
+  const older = h.filter((e) => daysBetween(e.date, latest.date) >= 30);
+  const base = older.length ? older[older.length - 1] : h[0];
+  return Math.round((latest.estimated1RM - base.estimated1RM) * 10) / 10;
+}
+
+function Sparkline({ values }: { values: number[] }) {
+  const v = values.slice(-8);
+  if (v.length < 2) return <span style={{ width: 56, height: 24, flexShrink: 0 }} />;
+  const min = Math.min(...v);
+  const max = Math.max(...v);
+  const range = max - min || 1;
+  const pts = v.map((n, i) => [2 + (i * 48) / (v.length - 1), 20 - ((n - min) / range) * 16] as const);
+  const last = pts[pts.length - 1];
+  return (
+    <svg width="56" height="24" viewBox="0 0 56 24" fill="none" aria-hidden="true" style={{ flexShrink: 0 }}>
+      <polyline points={pts.map((p) => p.join(',')).join(' ')} stroke="var(--tint)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      <circle cx={last[0]} cy={last[1]} r="3" fill="var(--tint)" />
+    </svg>
+  );
+}
+
+function ExerciseChart({ exercise }: { exercise: AggregatedExercise }) {
+  const { history } = exercise;
+  if (history.length < 2) return null;
+
+  const allVals = history.map(h => h.estimated1RM);
+  const minVal = Math.max(0, Math.min(...allVals) - 5);
+  const maxVal = Math.max(...allVals) + 5;
+  const range = maxVal - minVal || 1;
+
+  const W = 500;
+  const H = 200;
+  const PAD_L = 40;
+  const PAD_R = 10;
+  const PAD_T = 10;
+  const PAD_B = 30;
+  const chartW = W - PAD_L - PAD_R;
+  const chartH = H - PAD_T - PAD_B;
+
+  const xStep = history.length > 1 ? chartW / (history.length - 1) : chartW / 2;
+
+  function toX(i: number): number {
+    return PAD_L + (history.length > 1 ? i * xStep : chartW / 2);
+  }
+  function toY(v: number): number {
+    return PAD_T + chartH - ((v - minVal) / range) * chartH;
+  }
+
+  const path = history
+    .map((h, i) => `${i === 0 ? 'M' : 'L'}${toX(i).toFixed(1)},${toY(h.estimated1RM).toFixed(1)}`)
+    .join(' ');
+
+  const areaPath = `${path} L${toX(history.length - 1)},${toY(minVal)} L${toX(0)},${toY(minVal)} Z`;
+
+  const tickCount = 5;
+  const ticks = Array.from({ length: tickCount }, (_, i) => minVal + (range * i) / (tickCount - 1));
+
+  return (
+    <div style={s.chartCard}>
+      <div style={s.chartTitle}>Estimated 1RM Over Time</div>
+      <svg viewBox={`0 0 ${W} ${H}`} style={s.svgContainer}>
+        {ticks.map((v, i) => (
+          <g key={i}>
+            <line x1={PAD_L} x2={W - PAD_R} y1={toY(v)} y2={toY(v)} stroke="rgba(120,120,128,0.15)" strokeWidth="0.5" />
+            <text x={PAD_L - 4} y={toY(v) + 4} textAnchor="end" fill="rgba(235,235,245,0.4)" fontSize="10">{Math.round(v)}</text>
+          </g>
+        ))}
+        {history.map((h, i) => {
+          if (history.length > 10 && i % Math.ceil(history.length / 8) !== 0 && i !== history.length - 1) return null;
+          const d = new Date(h.date + 'T00:00:00');
+          const label = `${d.getDate()}/${d.getMonth() + 1}`;
+          return <text key={i} x={toX(i)} y={H - 4} textAnchor="middle" fill="rgba(235,235,245,0.4)" fontSize="10">{label}</text>;
+        })}
+        <path d={areaPath} fill="rgba(10,132,255,0.08)" />
+        <path d={path} fill="none" stroke="var(--tint)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+        {history.map((h, i) => (
+          <circle key={i} cx={toX(i)} cy={toY(h.estimated1RM)} r="3.5" fill="var(--tint)" />
+        ))}
+      </svg>
+    </div>
+  );
+}
+
 function Records() {
   const today = new Date().toISOString().split('T')[0];
 
   const [tab, setTab] = useState<'strength' | 'wods'>('strength');
-  const [strengthPRs, setStrengthPRs] = useState<StrengthPR[]>([]);
+  const [aggregated, setAggregated] = useState<AggregatedExercise[]>([]);
   const [wodRecords, setWodRecords] = useState<WodRecord[]>([]);
   const [manualRecords, setManualRecords] = useState<ManualRecord[]>([]);
   const [loading, setLoading] = useState(true);
@@ -274,6 +557,9 @@ function Records() {
   const [editingWodId, setEditingWodId] = useState<string | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [confirmDeleteName, setConfirmDeleteName] = useState('');
+  const [selectedExercise, setSelectedExercise] = useState<AggregatedExercise | null>(null);
+  const [query, setQuery] = useState('');
+  const [sortBy, setSortBy] = useState<'recent' | 'name' | 'strength'>('recent');
 
   const [strengthForm, setStrengthForm] = useState<StrengthFormState>({ exercise: '', reps: '', kilos: '', date: today, notes: '' });
   const [wodForm, setWodForm] = useState<WodFormState>({ name: '', desc: '', time: '', reps: '', date: today, avgHR: '', maxHR: '', notes: '' });
@@ -288,9 +574,9 @@ function Records() {
   const loadData = useCallback(() => {
     setLoading(true);
     setError(null);
-    Promise.all([api.getStrengthPRs(), api.getWodRecords(), api.listManualRecords()])
-      .then(([prs, wods, manual]) => {
-        setStrengthPRs(prs);
+    Promise.all([api.getAggregatedStrength(), api.getWodRecords(), api.listManualRecords()])
+      .then(([agg, wods, manual]) => {
+        setAggregated(agg);
         setWodRecords(wods);
         setManualRecords(manual);
       })
@@ -301,13 +587,33 @@ function Records() {
       .finally(() => setLoading(false));
   }, []);
 
-  const reloadManualRecords = () => {
-    api.listManualRecords()
-      .then(setManualRecords)
-      .catch((err) => console.error('Failed to reload manual records:', err));
+  const reloadData = () => {
+    Promise.all([api.getAggregatedStrength(), api.listManualRecords()])
+      .then(([agg, manual]) => {
+        setAggregated(agg);
+        setManualRecords(manual);
+        if (selectedExercise) {
+          const updated = agg.find(e => e.exercise.toLowerCase() === selectedExercise.exercise.toLowerCase());
+          setSelectedExercise(updated || null);
+        }
+      })
+      .catch((err) => console.error('Failed to reload records:', err));
   };
 
   useEffect(() => { loadData(); }, [loadData]);
+
+  const rows = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    const list = aggregated.filter((e) => !q || e.exercise.toLowerCase().includes(q));
+    const lastDate = (e: AggregatedExercise) => e.history[e.history.length - 1]?.date || e.bestSet.date;
+    return [...list].sort((a, b) =>
+      sortBy === 'name'
+        ? a.exercise.localeCompare(b.exercise)
+        : sortBy === 'strength'
+        ? b.estimated1RM - a.estimated1RM
+        : lastDate(b).localeCompare(lastDate(a))
+    );
+  }, [aggregated, query, sortBy]);
 
   const handleAddStrengthPR = async () => {
     if (!strengthForm.exercise || !strengthForm.reps || !strengthForm.kilos) return;
@@ -320,7 +626,7 @@ function Records() {
       setStrengthForm({ exercise: '', reps: '', kilos: '', date: today, notes: '' });
       setShowStrengthForm(false);
       showToast('Strength PR added!');
-      reloadManualRecords();
+      reloadData();
     } catch (err) {
       console.error('Failed to add strength PR:', err);
       showToast('Failed to add strength PR.', 'error');
@@ -350,7 +656,7 @@ function Records() {
       }
       setWodForm({ name: '', desc: '', time: '', reps: '', date: today, avgHR: '', maxHR: '', notes: '' });
       setShowWodForm(false);
-      reloadManualRecords();
+      api.listManualRecords().then(setManualRecords).catch(() => {});
     } catch (err) {
       console.error('Failed to save WOD record:', err);
       showToast('Failed to save WOD record.', 'error');
@@ -359,8 +665,7 @@ function Records() {
 
   const startEditWod = (r: ManualWodRecord) => {
     setWodForm({
-      name: r.name,
-      desc: r.description || '',
+      name: r.name, desc: r.description || '',
       time: r.timeSeconds ? formatTime(r.timeSeconds) : '',
       reps: r.totalReps ? String(r.totalReps) : '',
       date: r.date,
@@ -377,7 +682,7 @@ function Records() {
       await api.deleteManualRecord(id);
       setConfirmDeleteId(null);
       showToast('Record deleted.');
-      reloadManualRecords();
+      reloadData();
     } catch (err) {
       console.error('Failed to delete record:', err);
       showToast('Failed to delete record.', 'error');
@@ -390,101 +695,149 @@ function Records() {
     setConfirmDeleteName(name);
   };
 
-  if (loading) {
-    return <Spinner />;
-  }
+  if (loading) return <Spinner />;
 
   if (error) {
     return (
       <div style={{ textAlign: 'center', padding: '80px 20px' }} className="fade-in">
-        <div className="card" style={{ background: 'rgba(255,69,58,0.12)', color: 'var(--red)' }}>
-          {error}
-        </div>
-        <button className="btn btn-primary" onClick={loadData} style={{ marginTop: 16 }}>
-          Retry
-        </button>
+        <div className="card" style={{ background: 'rgba(255,69,58,0.12)', color: 'var(--red)' }}>{error}</div>
+        <button className="btn btn-primary" onClick={loadData} style={{ marginTop: 16 }}>Retry</button>
       </div>
     );
   }
 
-  const grouped = groupByExercise(strengthPRs);
-  const manualStrength = manualRecords.filter((r): r is ManualStrengthPR => r.type === 'strength');
   const manualWods = manualRecords.filter((r): r is ManualWodRecord => r.type === 'wod');
-  const manualStrengthGrouped = groupByExercise(manualStrength);
+
+  // Exercise detail view
+  if (selectedExercise) {
+    const reversedHistory = [...selectedExercise.history].reverse();
+    return (
+      <div style={s.page} className="fade-in">
+        <button style={s.backBtn} onClick={() => setSelectedExercise(null)}>
+          <svg width="10" height="16" viewBox="0 0 10 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="8 2 2 8 8 14" />
+          </svg>
+          Records
+        </button>
+
+        <div style={s.detailTitle}>{selectedExercise.exercise}</div>
+
+        <div style={s.highlightCard}>
+          <div style={s.highlightLabel}>Estimated 1RM</div>
+          <div style={s.highlightValue}>{selectedExercise.estimated1RM}</div>
+          <div style={s.highlightUnit}>kg</div>
+          <div style={s.highlightSub}>
+            {selectedExercise.bestSet.reps} rep{selectedExercise.bestSet.reps !== 1 ? 's' : ''} @ {selectedExercise.bestSet.kilos} kg — {formatDate(selectedExercise.bestSet.date)}
+          </div>
+        </div>
+
+        <ExerciseChart exercise={selectedExercise} />
+
+        <div style={s.sectionLabel}>All Entries</div>
+        <div className="card" style={{ overflow: 'hidden' }}>
+          {reversedHistory.map((h, i) => (
+            <div key={i} style={{
+              ...s.historyRow,
+              ...(i === reversedHistory.length - 1 ? { borderBottom: 'none' } : {}),
+            }}>
+              <span style={s.historyReps}>{h.reps} rep{h.reps !== 1 ? 's' : ''}</span>
+              <span style={s.historyKg}>{h.kilos} kg</span>
+              <span style={s.history1rm}>{h.estimated1RM} kg</span>
+              <span style={s.historyDate}>{formatDate(h.date)}</span>
+            </div>
+          ))}
+        </div>
+
+        <Toast toast={toast} onDismiss={dismissToast} />
+      </div>
+    );
+  }
 
   return (
-    <div style={s.page} className="fade-in">
-      <div style={s.segmented}>
-        <button
-          style={tab === 'strength' ? s.segActive : s.seg}
-          onClick={() => setTab('strength')}
-        >
-          Strength PRs
-        </button>
-        <button
-          style={tab === 'wods' ? s.segActive : s.seg}
-          onClick={() => setTab('wods')}
-        >
-          WOD Records
-        </button>
+    <div style={{ ...s.page, paddingTop: 0 }} className="fade-in">
+      <PageHeader title="Records" />
+
+      <div style={{ marginBottom: 16 }}>
+        <Segmented
+          label="Record type"
+          value={tab}
+          onChange={setTab}
+          options={[
+            { value: 'strength', label: 'Strength' },
+            { value: 'wods', label: 'WOD' },
+          ]}
+        />
       </div>
 
       {/* STRENGTH */}
       {tab === 'strength' && (
         <>
-          {strengthPRs.length > 0 && (
+          {aggregated.length > 0 ? (
             <>
-              <div style={s.firstSectionLabel}>From Sessions</div>
-              {Array.from(grouped.entries()).map(([key, prs]) => {
-                const best1RM = Math.max(...prs.map((p) => p.estimated1RM));
-                return (
-                  <div key={key} className="card" style={s.group}>
-                    <div style={s.exerciseName}>{prs[0].exercise}</div>
-                    <div style={s.est1rm}>Est. 1RM: {best1RM} kg</div>
-                    {prs.map((pr, i) => (
-                      <div key={i}>
-                        {i > 0 && <div style={{ height: '0.5px', background: 'var(--separator)' }} />}
-                        <div style={s.prRow}>
-                          <span style={s.reps}>{pr.reps} rep{pr.reps !== 1 ? 's' : ''}</span>
-                          <span style={s.kg}>{pr.kilos} kg</span>
-                          <span style={s.dateSmall}>{formatDate(pr.date)}</span>
-                        </div>
+              <label style={s.searchWrap}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <circle cx="11" cy="11" r="7" />
+                  <path d="M20 20l-3.5-3.5" />
+                </svg>
+                <input
+                  style={s.searchInput}
+                  type="search"
+                  placeholder="Search exercises"
+                  aria-label="Search exercises"
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                />
+              </label>
+              <div style={s.listMeta}>
+                <span>{rows.length} exercise{rows.length === 1 ? '' : 's'}</span>
+                <select style={s.sortSelect} aria-label="Sort exercises" value={sortBy} onChange={(e) => setSortBy(e.target.value as typeof sortBy)}>
+                  <option value="recent">Sort: Recent</option>
+                  <option value="strength">Sort: Est. 1RM</option>
+                  <option value="name">Sort: Name</option>
+                </select>
+              </div>
+              {rows.length > 0 ? (
+                <div style={s.rowsCard}>
+                  {rows.map((ex, i) => {
+                    const delta = trendOf(ex);
+                    const isNew = ex.history.length > 1 && daysBetween(ex.bestSet.date, today) <= 14 && daysBetween(ex.bestSet.date, today) >= 0;
+                    return (
+                      <div key={ex.exercise.toLowerCase()}>
+                        {i > 0 && <div style={s.rowSep} />}
+                        <button type="button" style={s.rowBtn} className="list-item" onClick={() => setSelectedExercise(ex)}>
+                          <span style={{ flex: 1, minWidth: 0 }}>
+                            <span style={{ display: 'block', fontSize: 17, fontWeight: 600, overflowWrap: 'anywhere' }}>{ex.exercise}</span>
+                            <span style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 6, marginTop: 3, fontSize: 13, color: 'var(--text-secondary)' }}>
+                              {isNew && <span style={{ ...s.newBadge, whiteSpace: 'nowrap' }}>NEW PR</span>}
+                              <span>{ex.bestSet.reps} × {ex.bestSet.kilos} kg · {formatDate(ex.bestSet.date)}</span>
+                            </span>
+                          </span>
+                          <Sparkline values={ex.history.map((h) => h.estimated1RM)} />
+                          <span style={s.rowValue}>
+                            <span style={{ display: 'block', ...s.rowBig }}>{fmt(ex.estimated1RM)} kg</span>
+                            {delta !== null && (
+                              <span
+                                style={{
+                                  display: 'block',
+                                  ...s.rowTrend,
+                                  color: delta > 0 ? 'var(--green)' : delta < 0 ? 'var(--orange)' : 'var(--text-secondary)',
+                                }}
+                              >
+                                {delta > 0 ? `▲ ${fmt(delta)} kg` : delta < 0 ? `▼ ${fmt(-delta)} kg` : 'no change'}
+                              </span>
+                            )}
+                          </span>
+                        </button>
                       </div>
-                    ))}
-                  </div>
-                );
-              })}
-            </>
-          )}
-
-          <div style={strengthPRs.length > 0 ? s.sectionLabel : s.firstSectionLabel}>Manual PRs</div>
-
-          {manualStrength.length > 0 ? (
-            Array.from(manualStrengthGrouped.entries()).map(([key, records]) => {
-              const best1RM = Math.max(...records.map((r) => r.estimated1RM));
-              return (
-                <div key={key} className="card" style={s.manualGroup}>
-                  <div style={s.exerciseName}>{records[0].exercise}</div>
-                  <div style={s.est1rm}>Est. 1RM: {best1RM} kg</div>
-                  {records.map((r, i) => (
-                    <div key={r.id}>
-                      {i > 0 && <div style={{ height: '0.5px', background: 'var(--separator)' }} />}
-                      <div style={s.prRowDel}>
-                        <span style={s.reps}>{r.reps} rep{r.reps !== 1 ? 's' : ''}</span>
-                        <span>
-                          <span style={s.kg}>{r.kilos} kg</span>
-                          {r.notes && <div style={s.note}>{r.notes}</div>}
-                        </span>
-                        <span style={s.dateSmall}>{formatDate(r.date)}</span>
-                        <button style={s.delBtn} onClick={() => askDeleteManual(r.id, r.exercise)} aria-label="Delete record">-</button>
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
-              );
-            })
+              ) : (
+                <div style={s.empty}>No exercises match “{query}”</div>
+              )}
+            </>
           ) : !showStrengthForm ? (
-            <div style={s.empty}>No manual PRs yet</div>
+            <div style={s.empty}>No strength records yet</div>
           ) : null}
 
           {showStrengthForm ? (
@@ -546,9 +899,7 @@ function Records() {
                       {record.history.map((entry) => (
                         <div key={`${entry.date}-${entry.sessionId}`} style={s.histRow}>
                           <span>{formatDate(entry.date)}</span>
-                          <span>
-                            {formatTime(entry.timeSeconds)}
-                          </span>
+                          <span>{formatTime(entry.timeSeconds)}</span>
                         </div>
                       ))}
                     </>
@@ -570,7 +921,7 @@ function Records() {
                       {r.timeSeconds ? formatTime(r.timeSeconds) : `${r.totalReps} rounds`}
                     </div>
                   </div>
-                  <div style={{ display: 'flex', gap: 12 }}>
+                  <div style={{ display: 'flex', gap: 8 }}>
                     <button style={{ ...s.delBtn, color: 'var(--tint)' }} onClick={() => startEditWod(r)} aria-label="Edit record">&#9998;</button>
                     <button style={s.delBtn} onClick={() => askDeleteManual(r.id, r.name)} aria-label="Delete record">-</button>
                   </div>
@@ -602,8 +953,8 @@ function Records() {
               </div>
               <div style={s.formRow}>
                 <div style={s.formField}>
-                  <label className="label">Time (m:ss)</label>
-                  <input className="input input-sm" placeholder="3:30" value={wodForm.time} onChange={(e) => setWodForm({ ...wodForm, time: e.target.value })} />
+                  <span className="label">Time</span>
+                  <TimeInput label="Time" value={wodForm.time ? parseTime(wodForm.time) : undefined} onChange={(sec) => setWodForm({ ...wodForm, time: sec ? formatTime(sec) : '' })} />
                 </div>
                 <div style={s.formField}>
                   <label className="label">Rounds</label>

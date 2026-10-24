@@ -12,6 +12,11 @@ function isString(s: unknown, maxLen = MAX_STRING_LENGTH): s is string {
   return typeof s === 'string' && s.length > 0 && s.length <= maxLen;
 }
 
+// Free text that may be empty (notes, WOD description) but is length-capped
+function isText(s: unknown, maxLen: number): s is string {
+  return typeof s === 'string' && s.length <= maxLen;
+}
+
 function isPositiveNumber(n: unknown): n is number {
   return typeof n === 'number' && Number.isFinite(n) && n > 0;
 }
@@ -47,7 +52,7 @@ function validateExercise(ex: unknown): string | null {
 function validateWod(wod: unknown): string | null {
   if (typeof wod !== 'object' || wod === null) return 'wod must be an object';
   const w = wod as Record<string, unknown>;
-  if (!isString(w.description, 2000)) return 'wod.description must be a non-empty string (max 2000 chars)';
+  if (!isText(w.description, 2000)) return 'wod.description must be a string (max 2000 chars)';
   if (w.name !== undefined && !isString(w.name)) return 'wod.name must be a string';
   if (w.timeSeconds !== undefined && !isPositiveNumber(w.timeSeconds)) return 'wod.timeSeconds must be positive';
   if (w.totalReps !== undefined && !isPositiveNumber(w.totalReps)) return 'wod.totalReps must be positive';
@@ -79,7 +84,7 @@ export function validateCreateSession(req: Request, res: Response, next: NextFun
   const wodErr = validateWod(wod);
   if (wodErr) { res.status(400).json({ error: wodErr }); return; }
 
-  if (notes !== undefined && !isString(notes, 2000)) {
+  if (notes !== undefined && !isText(notes, 2000)) {
     res.status(400).json({ error: 'notes must be a string (max 2000 chars)' });
     return;
   }
@@ -114,7 +119,7 @@ export function validateUpdateSession(req: Request, res: Response, next: NextFun
     const wodErr = validateWod(wod);
     if (wodErr) { res.status(400).json({ error: wodErr }); return; }
   }
-  if (notes !== undefined && !isString(notes, 2000)) {
+  if (notes !== undefined && !isText(notes, 2000)) {
     res.status(400).json({ error: 'notes must be a string (max 2000 chars)' });
     return;
   }
