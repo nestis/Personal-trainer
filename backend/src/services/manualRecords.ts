@@ -48,6 +48,8 @@ export async function createManualWodRecord(userId: string, input: {
   totalReps?: number;
   avgHeartRate?: number;
   maxHeartRate?: number;
+  rpe?: number;
+  recoveryHeartRate2min?: number;
   date: string;
   notes?: string;
 }): Promise<ManualWodRecord> {
@@ -62,6 +64,8 @@ export async function createManualWodRecord(userId: string, input: {
     ...(input.totalReps !== undefined && { totalReps: input.totalReps }),
     ...(input.avgHeartRate !== undefined && { avgHeartRate: input.avgHeartRate }),
     ...(input.maxHeartRate !== undefined && { maxHeartRate: input.maxHeartRate }),
+    ...(input.rpe !== undefined && { rpe: input.rpe }),
+    ...(input.recoveryHeartRate2min !== undefined && { recoveryHeartRate2min: input.recoveryHeartRate2min }),
     date: input.date,
     ...(input.notes !== undefined && { notes: input.notes }),
     createdAt: now,
@@ -82,6 +86,8 @@ export async function updateManualWodRecord(userId: string, id: string, input: {
   totalReps?: number;
   avgHeartRate?: number;
   maxHeartRate?: number;
+  rpe?: number;
+  recoveryHeartRate2min?: number;
   date?: string;
   notes?: string;
 }): Promise<ManualWodRecord | null> {
@@ -99,6 +105,8 @@ export async function updateManualWodRecord(userId: string, id: string, input: {
   if (input.totalReps !== undefined) updates.totalReps = input.totalReps;
   if (input.avgHeartRate !== undefined) updates.avgHeartRate = input.avgHeartRate;
   if (input.maxHeartRate !== undefined) updates.maxHeartRate = input.maxHeartRate;
+  if (input.rpe !== undefined) updates.rpe = input.rpe;
+  if (input.recoveryHeartRate2min !== undefined) updates.recoveryHeartRate2min = input.recoveryHeartRate2min;
 
   const setParts: string[] = [];
   const removeParts: string[] = [];

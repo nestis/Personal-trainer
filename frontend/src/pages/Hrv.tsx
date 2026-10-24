@@ -3,6 +3,8 @@ import { HrvRecord } from '../types';
 import { api } from '../services/api';
 import { formatDayLabel, parseLocalDate, toDateString } from '../utils/format';
 import PageHeader from '../components/PageHeader';
+import Segmented from '../components/Segmented';
+import RecoveryView from '../components/RecoveryView';
 import Spinner from '../components/Spinner';
 import Toast from '../components/Toast';
 import ConfirmDialog from '../components/ConfirmDialog';
@@ -248,7 +250,7 @@ function num(v: string): number {
   return parseFloat(v.replace(',', '.'));
 }
 
-function Hrv() {
+function HrvView() {
   const [records, setRecords] = useState<HrvRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast, showToast, dismissToast } = useToast();
@@ -374,8 +376,6 @@ function Hrv() {
 
   return (
     <div style={s.page} className="fade-in">
-      <PageHeader title="HRV" />
-
       <section style={s.card} aria-label="Reading">
         <form onSubmit={handleSubmit}>
           <div style={s.cardHead}>
@@ -503,6 +503,34 @@ function Hrv() {
         <ConfirmDialog title="Delete reading" message="Delete this HRV reading?" onConfirm={handleDelete} onCancel={() => setConfirmDelete(null)} />
       )}
       <Toast toast={toast} onDismiss={dismissToast} />
+    </div>
+  );
+}
+
+function Hrv() {
+  const [view, setView] = useState<'hrv' | 'recovery'>('hrv');
+
+  return (
+    <div>
+      <PageHeader title="HRV" />
+      <div style={{ marginBottom: 12 }}>
+        <Segmented
+          label="View"
+          value={view}
+          onChange={setView}
+          options={[
+            { value: 'hrv', label: 'HRV' },
+            { value: 'recovery', label: 'Recovery' },
+          ]}
+        />
+      </div>
+      {view === 'hrv' ? (
+        <HrvView />
+      ) : (
+        <div style={s.page} className="fade-in">
+          <RecoveryView />
+        </div>
+      )}
     </div>
   );
 }

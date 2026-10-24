@@ -29,6 +29,8 @@ interface WOD {
   totalReps?: number;
   avgHeartRate?: number;
   maxHeartRate?: number;
+  rpe?: number;
+  recoveryHeartRate2min?: number;
 }
 
 interface StrengthPR {
@@ -67,6 +69,21 @@ interface ManualRecord {
   totalReps?: number;
   avgHeartRate?: number;
   maxHeartRate?: number;
+  rpe?: number;
+  recoveryHeartRate2min?: number;
+}
+
+interface WodRecoveryPoint {
+  date: string;
+  source: 'session' | 'manual';
+  name: string;
+  sessionId?: string;
+  recordId?: string;
+  timeSeconds?: number;
+  rpe?: number;
+  maxHeartRate?: number;
+  recoveryHeartRate2min: number;
+  drop?: number;
 }
 
 interface HrvRecord {
@@ -160,6 +177,10 @@ export class ApiClient {
     return this.request<WodRecord[]>('/api/records/wods');
   }
 
+  async getWodRecovery(): Promise<WodRecoveryPoint[]> {
+    return this.request<WodRecoveryPoint[]>('/api/records/wod-recovery');
+  }
+
   async getManualRecords(type?: 'strength' | 'wod'): Promise<ManualRecord[]> {
     const qs = type ? `?type=${type}` : '';
     return this.request<ManualRecord[]>(`/api/manual-records${qs}`);
@@ -185,6 +206,8 @@ export class ApiClient {
     totalReps?: number;
     avgHeartRate?: number;
     maxHeartRate?: number;
+    rpe?: number;
+    recoveryHeartRate2min?: number;
     date: string;
     notes?: string;
   }): Promise<ManualRecord> {

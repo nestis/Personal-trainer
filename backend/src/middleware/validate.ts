@@ -25,6 +25,23 @@ function isNonNegativeNumber(n: unknown): n is number {
   return typeof n === 'number' && Number.isFinite(n) && n >= 0;
 }
 
+const MAX_HEART_RATE = 250;
+
+/** RPE: 1-10 in steps of 0.5. Recovery: heart rate 2 min after finishing (bpm). */
+export function wodExtrasError(rpe: unknown, recovery: unknown): string | null {
+  if (rpe !== undefined) {
+    if (typeof rpe !== 'number' || !Number.isFinite(rpe) || rpe < 1 || rpe > 10 || (rpe * 2) % 1 !== 0) {
+      return 'rpe must be a number from 1 to 10 in steps of 0.5';
+    }
+  }
+  if (recovery !== undefined) {
+    if (typeof recovery !== 'number' || !Number.isInteger(recovery) || recovery < 30 || recovery > MAX_HEART_RATE) {
+      return `recoveryHeartRate2min must be a whole number of bpm (30-${MAX_HEART_RATE})`;
+    }
+  }
+  return null;
+}
+
 function validateExerciseSet(set: unknown): string | null {
   if (typeof set !== 'object' || set === null) return 'set must be an object';
   const s = set as Record<string, unknown>;
@@ -58,6 +75,8 @@ function validateWod(wod: unknown): string | null {
   if (w.totalReps !== undefined && !isPositiveNumber(w.totalReps)) return 'wod.totalReps must be positive';
   if (w.avgHeartRate !== undefined && !isPositiveNumber(w.avgHeartRate)) return 'wod.avgHeartRate must be positive';
   if (w.maxHeartRate !== undefined && !isPositiveNumber(w.maxHeartRate)) return 'wod.maxHeartRate must be positive';
+  const extras = wodExtrasError(w.rpe, w.recoveryHeartRate2min);
+  if (extras) return `wod.${extras}`;
   return null;
 }
 
