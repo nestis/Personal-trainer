@@ -1,16 +1,18 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import { AggregatedExercise, WodRecord, ManualWodRecord, ManualRecord } from '../types';
 import { api } from '../services/api';
 import { formatTime, parseTime, formatDate } from '../utils/format';
 import Spinner from '../components/Spinner';
+import PageHeader from '../components/PageHeader';
+import Segmented from '../components/Segmented';
 import Toast from '../components/Toast';
 import ConfirmDialog from '../components/ConfirmDialog';
 import { useToast } from '../hooks/useToast';
 
 const s: Record<string, React.CSSProperties> = {
   page: {
-    paddingTop: 8,
-    paddingBottom: 80,
+    paddingTop: 'calc(var(--safe-top) + 8px)',
+    paddingBottom: 'calc(var(--tab-bar-height) + var(--safe-bottom) + 24px)',
   },
   title: {
     fontSize: 34,
@@ -72,6 +74,97 @@ const s: Record<string, React.CSSProperties> = {
     letterSpacing: 0.5,
     marginBottom: 8,
     paddingLeft: 4,
+  },
+  // Exercise list
+  searchWrap: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 8,
+    minHeight: 40,
+    padding: '0 12px',
+    marginBottom: 4,
+    background: 'var(--bg-grouped-secondary)',
+    borderRadius: 10,
+    color: 'var(--text-secondary)',
+  },
+  searchInput: {
+    flex: 1,
+    minWidth: 0,
+    minHeight: 40,
+    background: 'transparent',
+    border: 'none',
+    outline: 'none',
+    color: 'var(--text-primary)',
+    fontSize: 17,
+  },
+  listMeta: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    minHeight: 36,
+    padding: '0 4px',
+    fontSize: 13,
+    color: 'var(--text-secondary)',
+  },
+  sortSelect: {
+    appearance: 'none' as const,
+    background: 'transparent',
+    border: 'none',
+    color: 'var(--tint)',
+    fontSize: 13,
+    minHeight: 36,
+    padding: '0 4px',
+    cursor: 'pointer',
+    textAlign: 'right' as const,
+  },
+  rowsCard: {
+    background: 'var(--bg-grouped-secondary)',
+    borderRadius: 16,
+    overflow: 'hidden',
+    marginBottom: 12,
+  },
+  rowBtn: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 10,
+    width: '100%',
+    minHeight: 80,
+    padding: '10px 16px',
+    background: 'none',
+    border: 'none',
+    color: 'inherit',
+    textAlign: 'left' as const,
+    cursor: 'pointer',
+    WebkitTapHighlightColor: 'transparent',
+  },
+  rowSep: {
+    height: '0.5px',
+    background: 'var(--separator)',
+    marginLeft: 16,
+  },
+  newBadge: {
+    fontSize: 10,
+    fontWeight: 700,
+    letterSpacing: 0.5,
+    padding: '2px 6px',
+    borderRadius: 6,
+    background: 'rgba(48, 209, 88, 0.18)',
+    color: 'var(--green)',
+  },
+  rowValue: {
+    minWidth: 76,
+    textAlign: 'right' as const,
+    flexShrink: 0,
+  },
+  rowBig: {
+    fontSize: 20,
+    fontWeight: 700,
+    fontVariantNumeric: 'tabular-nums',
+  },
+  rowTrend: {
+    fontSize: 12,
+    fontWeight: 600,
+    marginTop: 1,
   },
   // Exercise cards
   exerciseCard: {
@@ -351,6 +444,42 @@ interface WodFormState {
   notes: string;
 }
 
+const DAY_MS = 86400000;
+
+function daysBetween(a: string, b: string): number {
+  return Math.round((new Date(b + 'T00:00:00').getTime() - new Date(a + 'T00:00:00').getTime()) / DAY_MS);
+}
+
+function fmt(n: number): string {
+  return String(Math.round(n * 10) / 10);
+}
+
+/** Change in estimated 1RM between the latest entry and the one ~30 days before it */
+function trendOf(ex: AggregatedExercise): number | null {
+  const h = ex.history;
+  if (h.length < 2) return null;
+  const latest = h[h.length - 1];
+  const older = h.filter((e) => daysBetween(e.date, latest.date) >= 30);
+  const base = older.length ? older[older.length - 1] : h[0];
+  return Math.round((latest.estimated1RM - base.estimated1RM) * 10) / 10;
+}
+
+function Sparkline({ values }: { values: number[] }) {
+  const v = values.slice(-8);
+  if (v.length < 2) return <span style={{ width: 56, height: 24, flexShrink: 0 }} />;
+  const min = Math.min(...v);
+  const max = Math.max(...v);
+  const range = max - min || 1;
+  const pts = v.map((n, i) => [2 + (i * 48) / (v.length - 1), 20 - ((n - min) / range) * 16] as const);
+  const last = pts[pts.length - 1];
+  return (
+    <svg width="56" height="24" viewBox="0 0 56 24" fill="none" aria-hidden="true" style={{ flexShrink: 0 }}>
+      <polyline points={pts.map((p) => p.join(',')).join(' ')} stroke="var(--tint)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      <circle cx={last[0]} cy={last[1]} r="3" fill="var(--tint)" />
+    </svg>
+  );
+}
+
 function ExerciseChart({ exercise }: { exercise: AggregatedExercise }) {
   const { history } = exercise;
   if (history.length < 2) return null;
@@ -428,6 +557,8 @@ function Records() {
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [confirmDeleteName, setConfirmDeleteName] = useState('');
   const [selectedExercise, setSelectedExercise] = useState<AggregatedExercise | null>(null);
+  const [query, setQuery] = useState('');
+  const [sortBy, setSortBy] = useState<'recent' | 'name' | 'strength'>('recent');
 
   const [strengthForm, setStrengthForm] = useState<StrengthFormState>({ exercise: '', reps: '', kilos: '', date: today, notes: '' });
   const [wodForm, setWodForm] = useState<WodFormState>({ name: '', desc: '', time: '', reps: '', date: today, avgHR: '', maxHR: '', notes: '' });
@@ -469,6 +600,19 @@ function Records() {
   };
 
   useEffect(() => { loadData(); }, [loadData]);
+
+  const rows = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    const list = aggregated.filter((e) => !q || e.exercise.toLowerCase().includes(q));
+    const lastDate = (e: AggregatedExercise) => e.history[e.history.length - 1]?.date || e.bestSet.date;
+    return [...list].sort((a, b) =>
+      sortBy === 'name'
+        ? a.exercise.localeCompare(b.exercise)
+        : sortBy === 'strength'
+        ? b.estimated1RM - a.estimated1RM
+        : lastDate(b).localeCompare(lastDate(a))
+    );
+  }, [aggregated, query, sortBy]);
 
   const handleAddStrengthPR = async () => {
     if (!strengthForm.exercise || !strengthForm.reps || !strengthForm.kilos) return;
@@ -609,43 +753,88 @@ function Records() {
   }
 
   return (
-    <div style={s.page} className="fade-in">
-      <div style={s.title}>Records</div>
+    <div style={{ ...s.page, paddingTop: 0 }} className="fade-in">
+      <PageHeader title="Records" />
 
-      <div style={s.segmented}>
-        <button style={tab === 'strength' ? s.segActive : s.seg} onClick={() => setTab('strength')}>
-          Strength PRs
-        </button>
-        <button style={tab === 'wods' ? s.segActive : s.seg} onClick={() => setTab('wods')}>
-          WOD Records
-        </button>
+      <div style={{ marginBottom: 16 }}>
+        <Segmented
+          label="Record type"
+          value={tab}
+          onChange={setTab}
+          options={[
+            { value: 'strength', label: 'Strength' },
+            { value: 'wods', label: 'WOD' },
+          ]}
+        />
       </div>
 
       {/* STRENGTH */}
       {tab === 'strength' && (
         <>
           {aggregated.length > 0 ? (
-            aggregated.map((ex, i) => (
-              <div
-                key={ex.exercise.toLowerCase()}
-                className="card fade-in-stagger"
-                style={{ ...s.exerciseCard, '--delay': `${i * 0.04}s` } as React.CSSProperties}
-                onClick={() => setSelectedExercise(ex)}
-              >
-                <div style={s.cardRow}>
-                  <div style={s.cardContent}>
-                    <div style={s.exerciseName}>{ex.exercise}</div>
-                    <div style={s.est1rm}>Est. 1RM {ex.estimated1RM} kg</div>
-                    <div style={s.bestSet}>
-                      {ex.bestSet.reps} rep{ex.bestSet.reps !== 1 ? 's' : ''} {ex.bestSet.kilos} kg — {formatDate(ex.bestSet.date)}
-                    </div>
-                  </div>
-                  <svg style={s.chevron} width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                    <polyline points="9 18 15 12 9 6" />
-                  </svg>
-                </div>
+            <>
+              <label style={s.searchWrap}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <circle cx="11" cy="11" r="7" />
+                  <path d="M20 20l-3.5-3.5" />
+                </svg>
+                <input
+                  style={s.searchInput}
+                  type="search"
+                  placeholder="Search exercises"
+                  aria-label="Search exercises"
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                />
+              </label>
+              <div style={s.listMeta}>
+                <span>{rows.length} exercise{rows.length === 1 ? '' : 's'}</span>
+                <select style={s.sortSelect} aria-label="Sort exercises" value={sortBy} onChange={(e) => setSortBy(e.target.value as typeof sortBy)}>
+                  <option value="recent">Sort: Recent</option>
+                  <option value="strength">Sort: Est. 1RM</option>
+                  <option value="name">Sort: Name</option>
+                </select>
               </div>
-            ))
+              {rows.length > 0 ? (
+                <div style={s.rowsCard}>
+                  {rows.map((ex, i) => {
+                    const delta = trendOf(ex);
+                    const isNew = ex.history.length > 1 && daysBetween(ex.bestSet.date, today) <= 14 && daysBetween(ex.bestSet.date, today) >= 0;
+                    return (
+                      <div key={ex.exercise.toLowerCase()}>
+                        {i > 0 && <div style={s.rowSep} />}
+                        <button type="button" style={s.rowBtn} className="list-item" onClick={() => setSelectedExercise(ex)}>
+                          <span style={{ flex: 1, minWidth: 0 }}>
+                            <span style={{ display: 'block', fontSize: 17, fontWeight: 600, overflowWrap: 'anywhere' }}>{ex.exercise}</span>
+                            <span style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 6, marginTop: 3, fontSize: 13, color: 'var(--text-secondary)' }}>
+                              {isNew && <span style={{ ...s.newBadge, whiteSpace: 'nowrap' }}>NEW PR</span>}
+                              <span>{ex.bestSet.reps} × {ex.bestSet.kilos} kg · {formatDate(ex.bestSet.date)}</span>
+                            </span>
+                          </span>
+                          <Sparkline values={ex.history.map((h) => h.estimated1RM)} />
+                          <span style={s.rowValue}>
+                            <span style={{ display: 'block', ...s.rowBig }}>{fmt(ex.estimated1RM)} kg</span>
+                            {delta !== null && (
+                              <span
+                                style={{
+                                  display: 'block',
+                                  ...s.rowTrend,
+                                  color: delta > 0 ? 'var(--green)' : delta < 0 ? 'var(--orange)' : 'var(--text-secondary)',
+                                }}
+                              >
+                                {delta > 0 ? `▲ ${fmt(delta)} kg` : delta < 0 ? `▼ ${fmt(-delta)} kg` : 'no change'}
+                              </span>
+                            )}
+                          </span>
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div style={s.empty}>No exercises match “{query}”</div>
+              )}
+            </>
           ) : !showStrengthForm ? (
             <div style={s.empty}>No strength records yet</div>
           ) : null}

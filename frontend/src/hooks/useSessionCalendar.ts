@@ -8,125 +8,118 @@ function monthKey(d: Date): string {
 }
 
 function firstOfMonth(d: Date): string {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`;
+  return `${monthKey(d)}-01`;
 }
 
 function lastOfMonth(d: Date): string {
-  const last = new Date(d.getFullYear(), d.getMonth() + 1, 0);
-  return toDateString(last);
+  return toDateString(new Date(d.getFullYear(), d.getMonth() + 1, 0));
 }
 
+/**
+ * Loads sessions one month at a time and caches each month, so the week strip,
+ * the month calendar and the lists below all read from the same data.
+ * The first load fetches the previous and the current month in one query.
+ */
 export function useSessionCalendar() {
   const today = useRef(new Date());
   const [currentMonth, setCurrentMonth] = useState<Date>(
     () => new Date(today.current.getFullYear(), today.current.getMonth(), 1)
   );
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
-  const [sessions, setSessions] = useState<Session[]>([]);
+  const [cache, setCache] = useState<Record<string, Session[]>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const cacheRef = useRef<Record<string, Session[]>>({});
-  const initialFetchDone = useRef(false);
+  const cacheRef = useRef(cache);
+  cacheRef.current = cache;
+  const [reloadKey, setReloadKey] = useState(0);
 
-  // Partition sessions into cache buckets by month
-  const partitionIntoCache = useCallback((items: Session[]) => {
-    const buckets: Record<string, Session[]> = {};
-    for (const s of items) {
-      const key = s.date.substring(0, 7);
-      if (!buckets[key]) buckets[key] = [];
-      buckets[key].push(s);
-    }
-    for (const [key, value] of Object.entries(buckets)) {
-      cacheRef.current[key] = value;
-    }
+  // First load: previous + current month
+  useEffect(() => {
+    const now = today.current;
+    const prev = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    let cancelled = false;
+    setLoading(true);
+    setError(null);
+    api
+      .listSessions(firstOfMonth(prev), lastOfMonth(now))
+      .then((items) => {
+        if (cancelled) return;
+        const buckets: Record<string, Session[]> = { [monthKey(prev)]: [], [monthKey(now)]: [] };
+        for (const s of items) {
+          const key = s.date.substring(0, 7);
+          if (buckets[key]) buckets[key].push(s);
+        }
+        setCache(buckets);
+      })
+      .catch((err) => {
+        if (!cancelled) setError(err.message || 'Failed to load sessions');
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [reloadKey]);
+
+  // Any other month is fetched on demand (once)
+  const pending = useRef(new Set<string>());
+  const ensureMonth = useCallback((d: Date) => {
+    const key = monthKey(d);
+    if (cacheRef.current[key] || pending.current.has(key)) return;
+    pending.current.add(key);
+    setLoading(true);
+    api
+      .listSessions(firstOfMonth(d), lastOfMonth(d))
+      .then((items) => setCache((c) => ({ ...c, [key]: items })))
+      .catch((err) => setError(err.message || 'Failed to load sessions'))
+      .finally(() => {
+        pending.current.delete(key);
+        setLoading(pending.current.size > 0);
+      });
   }, []);
 
-  // Initial load: last 3 weeks through end of current month
   useEffect(() => {
-    if (initialFetchDone.current) return;
-    initialFetchDone.current = true;
+    if (!loading && !error) ensureMonth(currentMonth);
+  }, [currentMonth, loading, error, ensureMonth]);
 
-    const threeWeeksAgo = new Date(today.current);
-    threeWeeksAgo.setDate(threeWeeksAgo.getDate() - 21);
-    const startDate = toDateString(threeWeeksAgo);
-    const endDate = lastOfMonth(today.current);
-
-    setLoading(true);
+  const changeMonth = useCallback((d: Date) => {
     setError(null);
-    api
-      .listSessions(startDate, endDate)
-      .then((items) => {
-        partitionIntoCache(items);
-        const key = monthKey(currentMonth);
-        setSessions(cacheRef.current[key] || []);
-      })
-      .catch((err) => {
-        setError(err.message || 'Failed to load sessions');
-      })
-      .finally(() => setLoading(false));
-  }, [currentMonth, partitionIntoCache]);
-
-  // Fetch when month changes (cache-first)
-  useEffect(() => {
-    const key = monthKey(currentMonth);
-    if (cacheRef.current[key]) {
-      setSessions(cacheRef.current[key]);
-      return;
-    }
-
-    // Don't fetch if initial load hasn't completed
-    if (!initialFetchDone.current) return;
-
-    const start = firstOfMonth(currentMonth);
-    const end = lastOfMonth(currentMonth);
-
-    setLoading(true);
-    setError(null);
-    api
-      .listSessions(start, end)
-      .then((items) => {
-        cacheRef.current[key] = items;
-        setSessions(items);
-      })
-      .catch((err) => {
-        setError(err.message || 'Failed to load sessions');
-      })
-      .finally(() => setLoading(false));
-  }, [currentMonth]);
+    setCurrentMonth(new Date(d.getFullYear(), d.getMonth(), 1));
+  }, []);
 
   const retry = useCallback(() => {
-    const key = monthKey(currentMonth);
-    delete cacheRef.current[key];
-    // Force re-fetch by toggling month
-    setCurrentMonth(new Date(currentMonth));
-  }, [currentMonth]);
+    setCache({});
+    setReloadKey((k) => k + 1);
+  }, []);
 
-  // Derive session dates map for calendar dots
+  // Every session loaded so far, newest first
+  const allSessions = useMemo(
+    () =>
+      Object.values(cache)
+        .flat()
+        .sort((a, b) => b.date.localeCompare(a.date) || b.createdAt.localeCompare(a.createdAt)),
+    [cache]
+  );
+
   const sessionDates = useMemo(() => {
     const map: Record<string, SessionStatus> = {};
-    for (const s of sessions) {
+    for (const s of allSessions) {
       const existing = map[s.date];
       if (!existing || s.status === 'completed') {
         map[s.date] = s.status;
       }
     }
     return map;
-  }, [sessions]);
-
-  // Filter displayed sessions
-  const displaySessions = useMemo(() => {
-    if (selectedDate) {
-      return sessions.filter((s) => s.date === selectedDate);
-    }
-    return sessions;
-  }, [sessions, selectedDate]);
+  }, [allSessions]);
 
   return {
     currentMonth,
-    setCurrentMonth,
+    setCurrentMonth: changeMonth,
+    ensureMonth,
     selectedDate,
     setSelectedDate,
-    displaySessions,
+    allSessions,
     sessionDates,
     loading,
     error,

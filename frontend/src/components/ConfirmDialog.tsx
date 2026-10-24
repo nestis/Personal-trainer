@@ -2,6 +2,7 @@ interface Props {
   title: string;
   message: string;
   confirmLabel?: string;
+  destructive?: boolean;
   onConfirm: () => void;
   onCancel: () => void;
 }
@@ -45,7 +46,7 @@ const s: Record<string, React.CSSProperties> = {
   },
 };
 
-function ConfirmDialog({ title, message, confirmLabel = 'Delete', onConfirm, onCancel }: Props) {
+function ConfirmDialog({ title, message, confirmLabel = 'Delete', destructive = true, onConfirm, onCancel }: Props) {
   return (
     <div style={s.backdrop} onClick={onCancel}>
       <div style={s.dialog} onClick={(e) => e.stopPropagation()}>
@@ -55,7 +56,7 @@ function ConfirmDialog({ title, message, confirmLabel = 'Delete', onConfirm, onC
           <button className="btn btn-secondary btn-sm" onClick={onCancel} style={{ flex: 1 }}>
             Cancel
           </button>
-          <button className="btn btn-danger btn-sm" onClick={onConfirm} style={{ flex: 1 }}>
+          <button className={`btn ${destructive ? 'btn-danger' : 'btn-primary'} btn-sm`} onClick={onConfirm} style={{ flex: 1 }}>
             {confirmLabel}
           </button>
         </div>

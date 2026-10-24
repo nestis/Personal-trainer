@@ -4,7 +4,7 @@ import { Session } from '../types';
 import { api } from '../services/api';
 import ExerciseEditor from '../components/ExerciseEditor';
 import WodEditor from '../components/WodEditor';
-import { formatDate } from '../utils/format';
+import { formatDayLabel } from '../utils/format';
 import Spinner from '../components/Spinner';
 import Toast from '../components/Toast';
 import ConfirmDialog from '../components/ConfirmDialog';
@@ -145,7 +145,7 @@ function SessionDetail() {
   return (
     <div style={s.page} className="fade-in">
       <div style={s.header}>
-        <div style={s.date}>{formatDate(session.date)}</div>
+        <div style={s.date}>{formatDayLabel(session.date)}</div>
         <span className={`badge badge-${session.status}`}>{session.status}</span>
       </div>
 
@@ -168,13 +168,21 @@ function SessionDetail() {
 
       <div style={s.actions}>
         {session.status === 'planned' && (
-          <button
-            className="btn btn-primary btn-block"
-            onClick={handleMarkCompleted}
-            disabled={saving}
-          >
-            {saving ? 'Saving...' : 'Mark as Completed'}
-          </button>
+          <>
+            <button
+              className="btn btn-primary btn-block"
+              onClick={() => navigate(`/session/${session.id}/log`)}
+            >
+              Start workout
+            </button>
+            <button
+              className="btn btn-secondary btn-block"
+              onClick={handleMarkCompleted}
+              disabled={saving}
+            >
+              {saving ? 'Saving...' : 'Mark as completed'}
+            </button>
+          </>
         )}
         <div style={s.actionRow}>
           <Link
