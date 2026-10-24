@@ -425,7 +425,7 @@ function SessionView() {
       const updated = await api.updateSession(id, { status });
       setSession(updated);
       setFocus(null);
-      showToast(status === 'completed' ? 'Marked as completed' : 'Moved back to planned');
+      showToast(status === 'completed' ? 'Marked as completed' : 'Marked as not completed');
     } catch {
       showToast('Failed to update session.', 'error');
     } finally {
@@ -531,7 +531,7 @@ function SessionView() {
                   setStatus(isPlanned ? 'completed' : 'planned');
                 }}
               >
-                {isPlanned ? 'Mark as completed' : 'Move back to planned'}
+                {isPlanned ? 'Mark as completed' : 'Mark as not completed'}
               </button>
               <div style={s.menuSep} />
               <button

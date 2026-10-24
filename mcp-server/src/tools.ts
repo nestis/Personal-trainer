@@ -75,7 +75,7 @@ export function registerTools(server: McpServer, api: ApiClient) {
 
   server.tool(
     "update_session",
-    "Update a workout session (mark complete, edit exercises, etc.). The wod object REPLACES the whole WOD: when changing the WOD, include the existing rpe, recoveryFromHeartRate and recoveryToHeartRate values (read the session first), or they are removed.",
+    "Update a workout session (edit date, exercises, WOD, notes; status 'completed' marks it done and 'planned' marks it NOT completed — set_session_status is the simpler way to change only the status). The wod object REPLACES the whole WOD: when changing the WOD, include the existing rpe, recoveryFromHeartRate and recoveryToHeartRate values (read the session first), or they are removed.",
     {
       id: z.string().describe("Session ID"),
       date: z.string().optional(),
@@ -105,6 +105,39 @@ export function registerTools(server: McpServer, api: ApiClient) {
     },
     async ({ id, ...data }) => {
       try { return ok(await api.updateSession(id, data)); }
+      catch (e) { return fail(e); }
+    },
+  );
+
+  server.tool(
+    "set_session_status",
+    "Mark a workout session as completed, or as NOT completed (status \"planned\"). Changes only the status; the exercises, WOD and notes are left as they are.",
+    {
+      id: z.string().describe("Session ID"),
+      status: z.enum(["planned", "completed"]).describe("\"completed\" = done; \"planned\" = not completed"),
+    },
+    async ({ id, status }) => {
+      try {
+        const s = await api.updateSession(id, { status });
+        return ok({ id: s.id, date: s.date, status: s.status });
+      }
+      catch (e) { return fail(e); }
+    },
+  );
+
+  server.tool(
+    "delete_session",
+    "PERMANENTLY delete a workout session. This cannot be undone. Only call it when the user has explicitly asked to delete that specific session: look it up first (get_sessions / get_session), tell the user which one (date and exercises) and set confirm to true only after they agree.",
+    {
+      id: z.string().describe("Session ID"),
+      confirm: z.literal(true).describe("Must be true: the user has explicitly confirmed deleting this session"),
+    },
+    async ({ id }) => {
+      try {
+        const s = await api.getSession(id); // fails with an error if it does not exist
+        await api.deleteSession(id);
+        return ok(`Deleted the session on ${s.date} (${s.status}, ${s.strength.length} exercise(s)).`);
+      }
       catch (e) { return fail(e); }
     },
   );
