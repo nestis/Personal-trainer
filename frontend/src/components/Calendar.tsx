@@ -186,7 +186,7 @@ function Calendar({ currentMonth, onMonthChange, selectedDate, onDateSelect, ses
                 <div
                   style={{
                     ...s.dot,
-                    background: status === 'completed' ? 'var(--green)' : 'var(--orange)',
+                    background: status === 'completed' ? 'var(--green)' : status === 'not_completed' ? 'var(--red)' : 'var(--orange)',
                   }}
                 />
               ) : (

@@ -140,7 +140,13 @@ const ChevronIcon = () => (
 );
 
 const StatusIcon = ({ status }: { status: Session['status'] }) =>
-  status === 'completed' ? (
+  status === 'not_completed' ? (
+    <span style={{ width: 24, height: 24, borderRadius: '50%', boxSizing: 'border-box', border: '2px solid var(--red)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }} aria-label="Not completed">
+      <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="var(--red)" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+        <path d="M2 2l6 6M8 2l-6 6" />
+      </svg>
+    </span>
+  ) : status === 'completed' ? (
     <span style={{ width: 24, height: 24, borderRadius: '50%', background: 'var(--green)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }} aria-label="Completed">
       <svg width="12" height="10" viewBox="0 0 12 10" fill="none" stroke="#000" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
         <path d="M1 5l3.5 3.5L11 1.5" />
@@ -237,7 +243,7 @@ function SessionList() {
   }, [allSessions, todayStr]);
 
   const recent = useMemo(
-    () => allSessions.filter((s) => s.id !== nextUp?.id && (s.status === 'completed' || s.date < todayStr)).slice(0, 10),
+    () => allSessions.filter((s) => s.id !== nextUp?.id && (s.status !== 'planned' || s.date < todayStr)).slice(0, 10),
     [allSessions, nextUp, todayStr]
   );
 

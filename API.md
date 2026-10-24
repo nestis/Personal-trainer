@@ -83,7 +83,7 @@ Content-Type: application/json
 }
 ```
 
-All fields are optional. Use `status: "completed"` to mark a session as done. Returns the updated `Session`.
+All fields are optional. `status` is `"planned"` (still to do), `"completed"` (done) or `"not_completed"` (planned but not done). Returns the updated `Session`.
 
 #### Delete Session
 
@@ -285,7 +285,7 @@ Returns `204 No Content`.
 {
   id: string;
   date: string;              // "YYYY-MM-DD"
-  status: "planned" | "completed";
+  status: "planned" | "completed" | "not_completed";
   strength: Exercise[];
   wod: WOD;
   notes?: string;

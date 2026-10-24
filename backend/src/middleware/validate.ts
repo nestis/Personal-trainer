@@ -140,8 +140,8 @@ export function validateUpdateSession(req: Request, res: Response, next: NextFun
     res.status(400).json({ error: 'date must be YYYY-MM-DD format' });
     return;
   }
-  if (status !== undefined && status !== 'planned' && status !== 'completed') {
-    res.status(400).json({ error: 'status must be "planned" or "completed"' });
+  if (status !== undefined && status !== 'planned' && status !== 'completed' && status !== 'not_completed') {
+    res.status(400).json({ error: 'status must be "planned", "completed" or "not_completed"' });
     return;
   }
   if (strength !== undefined) {

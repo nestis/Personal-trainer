@@ -75,11 +75,11 @@ export function registerTools(server: McpServer, api: ApiClient) {
 
   server.tool(
     "update_session",
-    "Update a workout session (edit date, exercises, WOD, notes; status 'completed' marks it done and 'planned' marks it NOT completed — set_session_status is the simpler way to change only the status). The wod object REPLACES the whole WOD: when changing the WOD, include the existing rpe, recoveryFromHeartRate and recoveryToHeartRate values (read the session first), or they are removed.",
+    "Update a workout session (edit date, exercises, WOD, notes; status is 'planned' = still to do, 'completed' = done, 'not_completed' = was planned but not done — set_session_status is the simpler way to change only the status). The wod object REPLACES the whole WOD: when changing the WOD, include the existing rpe, recoveryFromHeartRate and recoveryToHeartRate values (read the session first), or they are removed.",
     {
       id: z.string().describe("Session ID"),
       date: z.string().optional(),
-      status: z.enum(["planned", "completed"]).optional(),
+      status: z.enum(["planned", "completed", "not_completed"]).optional(),
       strength: z.array(z.object({
         id: z.string(),
         name: z.string(),
@@ -111,10 +111,10 @@ export function registerTools(server: McpServer, api: ApiClient) {
 
   server.tool(
     "set_session_status",
-    "Mark a workout session as completed, or as NOT completed (status \"planned\"). Changes only the status; the exercises, WOD and notes are left as they are.",
+    "Change a workout session's status: \"completed\" (done), \"not_completed\" (it was planned but not done), or \"planned\" (still to do). Changes only the status; the exercises, WOD and notes are left as they are.",
     {
       id: z.string().describe("Session ID"),
-      status: z.enum(["planned", "completed"]).describe("\"completed\" = done; \"planned\" = not completed"),
+      status: z.enum(["planned", "completed", "not_completed"]).describe("\"completed\" = done; \"not_completed\" = planned but not done; \"planned\" = still to do"),
     },
     async ({ id, status }) => {
       try {

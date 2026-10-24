@@ -254,6 +254,28 @@ function startTimeFor(id: string): number {
   }
 }
 
+const STATUS_TOAST: Record<Session['status'], string> = {
+  planned: 'Moved back to planned',
+  completed: 'Marked as completed',
+  not_completed: 'Marked as not completed',
+};
+
+// What the menu offers for each current status
+const STATUS_ACTIONS: Record<Session['status'], { label: string; status: Session['status'] }[]> = {
+  planned: [
+    { label: 'Mark as completed', status: 'completed' },
+    { label: 'Mark as not completed', status: 'not_completed' },
+  ],
+  completed: [
+    { label: 'Mark as not completed', status: 'not_completed' },
+    { label: 'Move back to planned', status: 'planned' },
+  ],
+  not_completed: [
+    { label: 'Mark as completed', status: 'completed' },
+    { label: 'Move back to planned', status: 'planned' },
+  ],
+};
+
 function wodHasContent(w: WOD): boolean {
   return Boolean(w.name || w.description || w.timeSeconds || w.totalReps || w.avgHeartRate || w.maxHeartRate);
 }
@@ -425,7 +447,7 @@ function SessionView() {
       const updated = await api.updateSession(id, { status });
       setSession(updated);
       setFocus(null);
-      showToast(status === 'completed' ? 'Marked as completed' : 'Marked as not completed');
+      showToast(STATUS_TOAST[status]);
     } catch {
       showToast('Failed to update session.', 'error');
     } finally {
@@ -522,18 +544,22 @@ function SessionView() {
                 Edit date &amp; exercises
               </button>
               <div style={s.menuSep} />
-              <button
-                role="menuitem"
-                style={s.menuItem}
-                disabled={busy}
-                onClick={() => {
-                  setMenuOpen(false);
-                  setStatus(isPlanned ? 'completed' : 'planned');
-                }}
-              >
-                {isPlanned ? 'Mark as completed' : 'Mark as not completed'}
-              </button>
-              <div style={s.menuSep} />
+              {STATUS_ACTIONS[session.status].map((action) => (
+                <div key={action.status}>
+                  <button
+                    role="menuitem"
+                    style={s.menuItem}
+                    disabled={busy}
+                    onClick={() => {
+                      setMenuOpen(false);
+                      setStatus(action.status);
+                    }}
+                  >
+                    {action.label}
+                  </button>
+                  <div style={s.menuSep} />
+                </div>
+              ))}
               <button
                 role="menuitem"
                 style={{ ...s.menuItem, color: 'var(--red)' }}
@@ -551,7 +577,7 @@ function SessionView() {
 
       <div style={s.statusRow}>
         <span>
-          <span className={`badge badge-${session.status}`} style={{ marginRight: 8 }}>{session.status}</span>
+          <span className={`badge badge-${session.status}`} style={{ marginRight: 8 }}>{session.status.replace('_', ' ')}</span>
           {totals.all > 0 && `${totals.done} of ${totals.all} sets`}
           {isPlanned && ` · ${formatTime(elapsed)}`}
         </span>
