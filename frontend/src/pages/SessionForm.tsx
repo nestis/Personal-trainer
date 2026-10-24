@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Exercise, WOD, Session, AggregatedExercise } from '../types';
+import { Exercise, WOD, Session, SessionStatus, AggregatedExercise } from '../types';
 import { api } from '../services/api';
 import { toDateString } from '../utils/format';
 import ExerciseEditor from '../components/ExerciseEditor';
@@ -144,7 +144,7 @@ function SessionForm() {
   const isEdit = Boolean(id);
 
   const [date, setDate] = useState(() => toDateString(new Date()));
-  const [status, setStatus] = useState<'planned' | 'completed'>('planned');
+  const [status, setStatus] = useState<SessionStatus>('planned');
   const [exercises, setExercises] = useState<Exercise[]>([]);
   const [wod, setWod] = useState<WOD>({ description: '' });
   const [notes, setNotes] = useState('');
@@ -252,16 +252,16 @@ function SessionForm() {
         {isEdit && (
           <>
             <div style={s.sep} />
-            <div style={s.groupRow}>
+            <div style={{ ...s.groupRow, flexDirection: 'column', alignItems: 'stretch', gap: 8, padding: '12px 16px' }}>
               <span style={{ fontSize: 17 }}>Status</span>
               <Segmented
                 label="Status"
-                fullWidth={false}
                 value={status}
                 onChange={setStatus}
                 options={[
                   { value: 'planned', label: 'Planned' },
                   { value: 'completed', label: 'Completed' },
+                  { value: 'not_completed', label: 'Not completed' },
                 ]}
               />
             </div>

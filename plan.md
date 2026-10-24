@@ -52,7 +52,7 @@ The Worker acts as:
 |---|---|---|
 | `create_session` | Create a planned workout | `POST /api/sessions` |
 | `update_session` | Update session (edit, status) | `PUT /api/sessions/:id` |
-| `set_session_status` | Mark a session completed / not completed | `PUT /api/sessions/:id` |
+| `set_session_status` | Set a session to planned / completed / not completed | `PUT /api/sessions/:id` |
 | `delete_session` | Permanently delete a session (needs `confirm: true`) | `DELETE /api/sessions/:id` |
 | `create_strength_pr` | Log a manual strength PR | `POST /api/manual-records/strength` |
 | `create_wod_record` | Log a manual WOD record | `POST /api/manual-records/wod` |

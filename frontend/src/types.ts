@@ -47,7 +47,8 @@ export interface WodRecord {
   }[];
 }
 
-export type SessionStatus = 'planned' | 'completed';
+// planned = still to do, completed = done, not_completed = planned but not done
+export type SessionStatus = 'planned' | 'completed' | 'not_completed';
 
 export interface Session {
   id: string;

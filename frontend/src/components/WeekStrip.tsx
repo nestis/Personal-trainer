@@ -110,9 +110,10 @@ const Chevron = ({ dir }: { dir: 'left' | 'right' }) => (
 
 function dot(status: SessionStatus | undefined): React.CSSProperties {
   if (!status) return { width: 6, height: 6 };
-  return status === 'completed'
-    ? { width: 6, height: 6, borderRadius: '50%', background: 'var(--green)' }
-    : { width: 6, height: 6, borderRadius: '50%', boxSizing: 'border-box', border: '1.5px solid var(--orange)' };
+  if (status === 'completed') return { width: 6, height: 6, borderRadius: '50%', background: 'var(--green)' };
+  // square, so it differs from the completed dot by shape as well as colour
+  if (status === 'not_completed') return { width: 6, height: 6, borderRadius: 1.5, background: 'var(--red)' };
+  return { width: 6, height: 6, borderRadius: '50%', boxSizing: 'border-box', border: '1.5px solid var(--orange)' };
 }
 
 function WeekStrip({ weekStart, onWeekChange, selectedDate, onDateSelect, sessionDates, onExpand }: Props) {
@@ -176,6 +177,7 @@ function WeekStrip({ weekStart, onWeekChange, selectedDate, onDateSelect, sessio
       <div style={s.legend}>
         <span style={s.legendItem}><span style={dot('completed')} />Completed</span>
         <span style={s.legendItem}><span style={dot('planned')} />Planned</span>
+        <span style={s.legendItem}><span style={dot('not_completed')} />Not completed</span>
       </div>
     </section>
   );

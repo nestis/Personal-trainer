@@ -1,7 +1,7 @@
 interface Session {
   id: string;
   date: string;
-  status: 'planned' | 'completed';
+  status: 'planned' | 'completed' | 'not_completed';
   strength: Exercise[];
   wod: WOD;
   notes?: string;
@@ -164,7 +164,7 @@ export class ApiClient {
 
   async updateSession(id: string, data: {
     date?: string;
-    status?: 'planned' | 'completed';
+    status?: 'planned' | 'completed' | 'not_completed';
     strength?: Exercise[];
     wod?: WOD;
     notes?: string;
@@ -280,6 +280,7 @@ export class ApiClient {
 
     const completed = sessions.filter(s => s.status === 'completed');
     const planned = sessions.filter(s => s.status === 'planned');
+    const notCompleted = sessions.filter(s => s.status === 'not_completed');
 
     // Sessions per week
     const weekBuckets = new Map<string, number>();
@@ -314,7 +315,7 @@ export class ApiClient {
     lines.push(`Period: ${startDate} to ${endDate}`);
     lines.push('');
     lines.push(`### Overview`);
-    lines.push(`- Total sessions: ${sessions.length} (${completed.length} completed, ${planned.length} planned)`);
+    lines.push(`- Total sessions: ${sessions.length} (${completed.length} completed, ${planned.length} planned, ${notCompleted.length} not completed)`);
 
     const weekEntries = [...weekBuckets.entries()].sort();
     if (weekEntries.length > 0) {

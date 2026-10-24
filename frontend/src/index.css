@@ -246,6 +246,11 @@ select.input {
   box-shadow: 0 0 12px rgba(255, 159, 10, 0.1);
 }
 
+.badge-not_completed {
+  background: rgba(255, 69, 58, 0.14);
+  color: var(--red);
+}
+
 .badge-completed {
   background: rgba(48, 209, 88, 0.14);
   color: var(--green);
