@@ -229,7 +229,7 @@ export function registerTools(server: McpServer, api: ApiClient) {
 
   server.tool(
     "get_hrv_records",
-    "Get HRV (Heart Rate Variability) daily measurements with optional date range filter. Returns min, max, and avg values per day.",
+    "Get HRV (Heart Rate Variability) daily measurements with optional date range filter. Returns min, max and avg (ms) per day. Days imported from Apple Health also have readings (the night's individual HRV readings, local time), restingHeartRate (bpm), sleepMinutes and sleepStages (deep / rem / core / awake minutes).",
     {
       startDate: z.string().optional().describe("Start date (YYYY-MM-DD)"),
       endDate: z.string().optional().describe("End date (YYYY-MM-DD)"),

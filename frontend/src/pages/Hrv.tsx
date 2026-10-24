@@ -255,6 +255,20 @@ function HrvChart({ records, start, end, emptyHint }: { records: HrvRecord[]; st
   );
 }
 
+function hm(minutes: number): string {
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  return h ? `${h}h ${String(m).padStart(2, '0')}m` : `${m}m`;
+}
+
+/** "RHR 52 · Sleep 7h 15m" for a reading, or '' */
+function wellness(r: HrvRecord): string {
+  const parts: string[] = [];
+  if (r.restingHeartRate) parts.push(`RHR ${r.restingHeartRate}`);
+  if (r.sleepMinutes) parts.push(`Sleep ${hm(r.sleepMinutes)}`);
+  return parts.join(' · ');
+}
+
 function num(v: string): number {
   return parseFloat(v.replace(',', '.'));
 }
@@ -454,6 +468,21 @@ function HrvView() {
             ))}
           </div>
 
+          {existing && (existing.source === 'apple-health' || existing.restingHeartRate || existing.sleepMinutes) && (
+            <div style={{ marginTop: 10, fontSize: 13, lineHeight: 1.45, color: 'var(--text-secondary)' }}>
+              {existing.source === 'apple-health' && <div style={{ fontWeight: 600 }}>From Apple Health</div>}
+              {wellness(existing) && <div>{wellness(existing)}</div>}
+              {existing.sleepStages && existing.sleepMinutes ? (
+                <div>
+                  Deep {hm(existing.sleepStages.deep)} · REM {hm(existing.sleepStages.rem)} · Core {hm(existing.sleepStages.core)} · Awake {hm(existing.sleepStages.awake)}
+                </div>
+              ) : null}
+              {existing.readings && existing.readings.length > 0 && (
+                <div>Readings: {existing.readings.map((x) => `${x.time} ${x.value}`).join(', ')}</div>
+              )}
+            </div>
+          )}
+
           {showNote ? (
             <div style={{ marginTop: 8 }}>
               <AutoTextarea
@@ -538,6 +567,9 @@ function HrvView() {
                   >
                     <span style={{ minWidth: 0, flex: 1 }}>
                       <span style={{ display: 'block' }}>{formatDayLabel(r.date)}</span>
+                      {wellness(r) && (
+                        <span style={{ display: 'block', marginTop: 2, fontSize: 13, color: 'var(--text-secondary)' }}>{wellness(r)}</span>
+                      )}
                       {r.notes && (
                         <span style={{ display: 'block', marginTop: 2, fontSize: 13, color: 'var(--text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                           {r.notes}

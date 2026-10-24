@@ -7,6 +7,7 @@ import sessionsRouter from './routes/sessions';
 import recordsRouter from './routes/records';
 import manualRecordsRouter from './routes/manualRecords';
 import hrvRouter from './routes/hrv';
+import healthRouter from './routes/health';
 
 const app = express();
 
@@ -20,6 +21,9 @@ app.use(cors({
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Authorization', 'Content-Type'],
 }));
+// Apple Health imports carry many samples (a workout's heart rate can be ~30 KB),
+// so they get a larger body limit; parsed here, the 10 KB parser below skips them
+app.use('/api/health', express.json({ limit: '512kb' }));
 app.use(express.json({ limit: '10kb' }));
 
 // Rate limit auth endpoint: 10 attempts per 15 minutes per IP
@@ -46,5 +50,6 @@ app.use('/api/sessions', passwordAuth, sessionsRouter);
 app.use('/api/records', passwordAuth, recordsRouter);
 app.use('/api/manual-records', passwordAuth, manualRecordsRouter);
 app.use('/api/hrv', passwordAuth, hrvRouter);
+app.use('/api/health', passwordAuth, healthRouter);
 
 export default app;

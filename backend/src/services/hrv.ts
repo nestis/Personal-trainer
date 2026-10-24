@@ -71,6 +71,20 @@ export async function updateHrvRecord(userId: string, id: string, input: {
   return updated;
 }
 
+/** Writes a whole HRV record (used by the Apple Health import); the record must belong to the user */
+export async function saveHrvRecord(userId: string, record: HrvRecord): Promise<HrvRecord> {
+  const item = { ...record, userId };
+  await docClient.send(
+    new PutCommand({
+      TableName: TABLE_NAME,
+      Item: item,
+      ConditionExpression: 'attribute_exists(id) AND userId = :uid',
+      ExpressionAttributeValues: { ':uid': userId },
+    })
+  );
+  return item;
+}
+
 export async function getHrvRecord(userId: string, id: string): Promise<HrvRecord | null> {
   const result = await docClient.send(
     new GetCommand({ TableName: TABLE_NAME, Key: { id } })

@@ -296,6 +296,45 @@ Returns `204 No Content`.
 
 ---
 
+### Apple Health imports
+
+Called by iPhone Shortcuts (step-by-step setup: [docs/apple-health-shortcuts.md](docs/apple-health-shortcuts.md)). Samples are sent as text, one per line, fields separated by `;`, dates in ISO 8601 with their UTC offset. Arrays of objects are also accepted. These routes accept bodies up to 512 KB.
+
+#### Daily (HRV, resting heart rate, sleep)
+
+```
+POST /api/health/daily
+Content-Type: application/json
+
+{
+  "hrv": "2026-10-23T22:41:00+02:00;51\n2026-10-24T02:05:00+02:00;83",
+  "restingHeartRate": "52",
+  "sleep": "2026-10-23T23:00:00+02:00;2026-10-24T01:00:00+02:00;Core\n...",
+  "date": "2026-10-24"
+}
+```
+
+All fields are optional, but at least one must contain data. `date` defaults to the local date of the last HRV reading (or of the end of sleep). Updates that day's `HrvRecord` (keeping `notes`) or creates it; without HRV readings it can only add to an existing entry. Sleep stages are read from the Health value (English or Spanish); *In Bed* and *Awake* do not count as sleep and overlapping samples are counted once. Returns `{ action, date, hrv, restingHeartRate, sleep, skippedLines, record }`.
+
+#### Workout (WOD heart rate and recovery)
+
+```
+POST /api/health/workout
+Content-Type: application/json
+
+{
+  "workoutStart": "2026-10-24T10:00:00+02:00",
+  "workoutEnd": "2026-10-24T10:40:00+02:00",
+  "heartRate": "2026-10-24T10:00:05+02:00;98\n...",
+  "sessionId": "optional",
+  "date": "optional YYYY-MM-DD"
+}
+```
+
+`heartRate` should run from the workout start until at least 2.5 minutes after it ended. The server sets the WOD's `avgHeartRate` and `maxHeartRate` (samples during the workout), `recoveryFromHeartRate` (reading at the end), `recoveryToHeartRate` (reading closest to 2 minutes later, within 45 s) and `recoveryHeartRate2min` (the drop), keeping the rest of the WOD. The session is `sessionId`, else the session on the workout's local date (one with a WOD first). Returns the computed values and `warnings`; `404` (with the computed values in `details`) when there is no session that day.
+
+---
+
 ## Data Types
 
 ### Session
@@ -449,6 +488,12 @@ Returns `204 No Content`.
   max: number;               // Maximum HRV in ms
   avg: number;               // Average HRV in ms
   notes?: string;
+  readings?: { time: string; value: number }[];  // Apple Health import: the night's readings (local HH:MM)
+  restingHeartRate?: number;                      // bpm
+  sleepMinutes?: number;                          // time asleep
+  sleepStages?: { deep: number; rem: number; core: number; awake: number }; // minutes
+  source?: "apple-health";
+  healthImportedAt?: string;
   createdAt: string;         // ISO datetime
   updatedAt: string;         // ISO datetime
 }

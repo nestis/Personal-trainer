@@ -112,6 +112,13 @@ export interface HrvRecord {
   max: number;
   avg: number;
   notes?: string;
+  // Filled by the Apple Health import (iPhone Shortcut)
+  readings?: { time: string; value: number }[];
+  restingHeartRate?: number;
+  sleepMinutes?: number;
+  sleepStages?: { deep: number; rem: number; core: number; awake: number };
+  source?: 'apple-health';
+  healthImportedAt?: string;
   createdAt: string;
   updatedAt: string;
 }
