@@ -6,6 +6,7 @@ import { toDateString } from '../utils/format';
 import ExerciseEditor from '../components/ExerciseEditor';
 import WodEditor from '../components/WodEditor';
 import Segmented from '../components/Segmented';
+import AutoTextarea from '../components/AutoTextarea';
 import Spinner from '../components/Spinner';
 import Toast from '../components/Toast';
 import { useToast } from '../hooks/useToast';
@@ -211,7 +212,7 @@ function SessionForm() {
       } else {
         await api.createSession({ date, strength, wod, notes });
       }
-      navigate('/');
+      navigate(isEdit && id ? `/session/${id}` : '/');
     } catch (err) {
       console.error('Failed to save session:', err);
       showToast('Failed to save session.', 'error');
@@ -314,12 +315,13 @@ function SessionForm() {
 
       <div style={s.section}>
         <div style={s.sectionTitle}>Notes</div>
-        <textarea
-          className="input"
+        <AutoTextarea
+          label="Notes"
           value={notes}
+          onChange={setNotes}
+          minRows={5}
+          maxLength={2000}
           placeholder="Any additional notes..."
-          onChange={(e) => setNotes(e.target.value)}
-          rows={2}
         />
       </div>
 

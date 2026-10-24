@@ -1,5 +1,6 @@
 import { WOD } from '../types';
-import { formatTime, parseTime } from '../utils/format';
+import AutoTextarea from './AutoTextarea';
+import TimeInput from './TimeInput';
 
 interface Props {
   wod: WOD;
@@ -8,101 +9,87 @@ interface Props {
 }
 
 const s: Record<string, React.CSSProperties> = {
+  card: {
+    background: 'var(--bg-grouped-secondary)',
+    borderRadius: 16,
+    padding: 16,
+  },
+  field: {
+    marginBottom: 14,
+  },
   grid: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))',
-    gap: 10,
-    marginTop: 14,
+    gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+    gap: 12,
   },
 };
 
+function numberField(
+  label: string,
+  value: number | undefined,
+  placeholder: string,
+  onChange: (n: number | undefined) => void,
+  readOnly?: boolean
+) {
+  return (
+    <label>
+      <span className="label">{label}</span>
+      <input
+        className="input input-sm"
+        type="number"
+        inputMode="numeric"
+        placeholder={placeholder}
+        value={value || ''}
+        onFocus={(e) => e.target.select()}
+        onChange={(e) => onChange(parseInt(e.target.value) || undefined)}
+        readOnly={readOnly}
+      />
+    </label>
+  );
+}
+
 function WodEditor({ wod, onChange, readOnly }: Props) {
   return (
-    <div className="card">
-      <div style={{ marginBottom: 14 }}>
-        <label className="label">WOD Name
-          <input
-            className="input"
-            placeholder="e.g., Fran, Murph..."
-            value={wod.name || ''}
-            onChange={(e) => onChange({ ...wod, name: e.target.value || undefined })}
-            readOnly={readOnly}
-          />
-        </label>
+    <div style={s.card}>
+      <label style={{ display: 'block', ...s.field }}>
+        <span className="label">WOD name</span>
+        <input
+          className="input"
+          placeholder="e.g., Fran, Murph..."
+          value={wod.name || ''}
+          onChange={(e) => onChange({ ...wod, name: e.target.value || undefined })}
+          readOnly={readOnly}
+        />
+      </label>
+
+      <div style={s.field}>
+        <span className="label">Description</span>
+        <AutoTextarea
+          label="WOD description"
+          value={wod.description}
+          placeholder="Describe the WOD..."
+          minRows={3}
+          maxLength={2000}
+          onChange={(description) => onChange({ ...wod, description })}
+          readOnly={readOnly}
+        />
       </div>
 
-      <div>
-        <label className="label">Description
-          <textarea
-            className="input"
-            value={wod.description}
-            placeholder="Describe the WOD..."
-            onChange={(e) => onChange({ ...wod, description: e.target.value })}
-            readOnly={readOnly}
-            rows={3}
-          />
-        </label>
+      <div style={{ ...s.field }}>
+        <span className="label">Time</span>
+        <TimeInput
+          label="WOD time"
+          value={wod.timeSeconds}
+          onChange={(timeSeconds) => onChange({ ...wod, timeSeconds })}
+          readOnly={readOnly}
+        />
       </div>
 
       <div style={s.grid}>
-        <div>
-          <label className="label">Time
-            <input
-              className="input input-sm"
-              placeholder="m:ss"
-              value={wod.timeSeconds ? formatTime(wod.timeSeconds) : ''}
-              onChange={(e) =>
-                onChange({ ...wod, timeSeconds: parseTime(e.target.value) })
-              }
-              readOnly={readOnly}
-            />
-          </label>
-        </div>
-        <div>
-          <label className="label">Reps
-            <input
-              className="input input-sm"
-              type="number"
-              inputMode="numeric"
-              placeholder="0"
-              value={wod.totalReps || ''}
-              onChange={(e) =>
-                onChange({ ...wod, totalReps: parseInt(e.target.value) || undefined })
-              }
-              readOnly={readOnly}
-            />
-          </label>
-        </div>
-        <div>
-          <label className="label">Avg HR
-            <input
-              className="input input-sm"
-              type="number"
-              inputMode="numeric"
-              placeholder="bpm"
-              value={wod.avgHeartRate || ''}
-              onChange={(e) =>
-                onChange({ ...wod, avgHeartRate: parseInt(e.target.value) || undefined })
-              }
-              readOnly={readOnly}
-            />
-          </label>
-        </div>
-        <div>
-          <label className="label">Max HR
-            <input
-              className="input input-sm"
-              type="number"
-              inputMode="numeric"
-              placeholder="bpm"
-              value={wod.maxHeartRate || ''}
-              onChange={(e) =>
-                onChange({ ...wod, maxHeartRate: parseInt(e.target.value) || undefined })
-              }
-              readOnly={readOnly}
-            />
-          </label>
-        </div>
+        {numberField('Rounds / reps', wod.totalReps, '0', (totalReps) => onChange({ ...wod, totalReps }), readOnly)}
+        <span />
+        {numberField('Avg HR', wod.avgHeartRate, 'bpm', (avgHeartRate) => onChange({ ...wod, avgHeartRate }), readOnly)}
+        {numberField('Max HR', wod.maxHeartRate, 'bpm', (maxHeartRate) => onChange({ ...wod, maxHeartRate }), readOnly)}
       </div>
     </div>
   );

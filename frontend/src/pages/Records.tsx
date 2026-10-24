@@ -5,6 +5,7 @@ import { formatTime, parseTime, formatDate } from '../utils/format';
 import Spinner from '../components/Spinner';
 import PageHeader from '../components/PageHeader';
 import Segmented from '../components/Segmented';
+import TimeInput from '../components/TimeInput';
 import Toast from '../components/Toast';
 import ConfirmDialog from '../components/ConfirmDialog';
 import { useToast } from '../hooks/useToast';
@@ -952,8 +953,8 @@ function Records() {
               </div>
               <div style={s.formRow}>
                 <div style={s.formField}>
-                  <label className="label">Time (m:ss)</label>
-                  <input className="input input-sm" placeholder="3:30" value={wodForm.time} onChange={(e) => setWodForm({ ...wodForm, time: e.target.value })} />
+                  <span className="label">Time</span>
+                  <TimeInput label="Time" value={wodForm.time ? parseTime(wodForm.time) : undefined} onChange={(sec) => setWodForm({ ...wodForm, time: sec ? formatTime(sec) : '' })} />
                 </div>
                 <div style={s.formField}>
                   <label className="label">Rounds</label>

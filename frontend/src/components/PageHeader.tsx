@@ -45,7 +45,7 @@ const s: Record<string, React.CSSProperties> = {
   },
 };
 
-export function AddButton({ onClick, to, label }: { onClick?: () => void; to?: string; label: string }) {
+export function AddButton({ onClick, to, label, subtle }: { onClick?: () => void; to?: string; label: string; subtle?: boolean }) {
   const navigate = useNavigate();
   return (
     <button
@@ -54,8 +54,8 @@ export function AddButton({ onClick, to, label }: { onClick?: () => void; to?: s
       aria-label={label}
       onClick={() => (to ? navigate(to) : onClick?.())}
     >
-      <span style={{ ...s.circle, background: 'var(--tint-fill)' }}>
-        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+      <span style={{ ...s.circle, background: subtle ? 'var(--bg-tertiary)' : 'var(--tint-fill)', color: subtle ? 'var(--text-secondary)' : '#fff' }}>
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
           <path d="M8 2v12M2 8h12" />
         </svg>
       </span>

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Session } from '../types';
-import { addDays, formatDayLabel, startOfWeek, toDateString } from '../utils/format';
+import { Exercise, Session } from '../types';
+import { addDays, formatDayLabel, formatTime, startOfWeek, toDateString } from '../utils/format';
 import { useSessionCalendar } from '../hooks/useSessionCalendar';
 import Calendar from '../components/Calendar';
 import WeekStrip from '../components/WeekStrip';
@@ -35,6 +35,27 @@ const s: Record<string, React.CSSProperties> = {
     fontWeight: 700,
     letterSpacing: -0.3,
     marginTop: 6,
+  },
+  planList: {
+    marginTop: 10,
+  },
+  planRow: {
+    display: 'flex',
+    alignItems: 'baseline',
+    justifyContent: 'space-between',
+    gap: 12,
+    padding: '6px 0',
+    borderTop: '0.5px solid var(--separator)',
+    fontSize: 17,
+  },
+  planName: {
+    minWidth: 0,
+  },
+  planSets: {
+    color: 'var(--text-secondary)',
+    fontVariantNumeric: 'tabular-nums',
+    whiteSpace: 'nowrap' as const,
+    fontSize: 15,
   },
   nextMeta: {
     fontSize: 15,
@@ -136,6 +157,13 @@ function exerciseTitle(session: Session): string {
   return `${names[0]}, ${names[1]} +${names.length - 2}`;
 }
 
+function planSummary(ex: Exercise): string {
+  const first = ex.sets[0];
+  if (!first) return '';
+  const same = ex.sets.every((st) => st.reps === first.reps && st.kilos === first.kilos);
+  return same ? `${ex.sets.length} × ${first.reps} @ ${first.kilos} kg` : `${ex.sets.length} sets`;
+}
+
 function sessionMeta(session: Session): string {
   const sets = session.strength.reduce((n, ex) => n + ex.sets.length, 0);
   const parts: string[] = [formatDayLabel(session.date)];
@@ -220,7 +248,7 @@ function SessionList() {
   return (
     <div style={s.page} className="fade-in">
       <PageHeader title="Workouts">
-        <AddButton to="/new" label="New session" />
+        <AddButton to="/new" label="New session" subtle />
       </PageHeader>
 
       {error ? (
@@ -296,22 +324,28 @@ function SessionList() {
                     Next up · {formatDayLabel(nextUp.date)}
                   </div>
                   <div style={s.nextTitle}>{exerciseTitle(nextUp)}</div>
-                  <div style={s.nextMeta}>
-                    {[
-                      nextUp.strength.length ? `${nextUp.strength.length} exercise${nextUp.strength.length === 1 ? '' : 's'}` : '',
-                      nextSets ? `${nextSets} sets` : '',
-                      nextUp.wod.name ? `WOD: ${nextUp.wod.name}` : nextUp.wod.description ? 'WOD' : '',
-                    ]
-                      .filter(Boolean)
-                      .join(' · ')}
+                  <div style={s.planList}>
+                    {nextUp.strength.map((ex) => (
+                      <div key={ex.id} style={s.planRow}>
+                        <span style={s.planName}>{ex.name}</span>
+                        <span style={s.planSets}>{planSummary(ex)}</span>
+                      </div>
+                    ))}
+                    {(nextUp.wod.name || nextUp.wod.description) && (
+                      <div style={s.planRow}>
+                        <span style={s.planName}>WOD{nextUp.wod.name ? ` · ${nextUp.wod.name}` : ''}</span>
+                        <span style={s.planSets}>{nextUp.wod.timeSeconds ? formatTime(nextUp.wod.timeSeconds) : ''}</span>
+                      </div>
+                    )}
                   </div>
+                  <div style={s.nextMeta}>{nextSets} sets in total</div>
                   <button
                     type="button"
                     className="btn btn-primary btn-block"
                     style={s.startBtn}
-                    onClick={() => navigate(`/session/${nextUp.id}/log`)}
+                    onClick={() => navigate(`/session/${nextUp.id}`)}
                   >
-                    Start workout
+                    {nextUp.date === todayStr ? 'Open workout' : 'Open session'}
                   </button>
                 </section>
               )}
