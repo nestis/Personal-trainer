@@ -121,7 +121,7 @@ Returns `WodRecord[]` — best times per named WOD with full attempt history, co
 GET /api/records/wod-recovery
 ```
 
-Returns `WodRecoveryPoint[]`, oldest first: every WOD that has a `recoveryHeartRate2min` value, from sessions (any status) and manual WOD records. `drop` is `maxHeartRate - recoveryHeartRate2min` (bigger is better) and is only present when `maxHeartRate` was recorded.
+Returns `WodRecoveryPoint[]`, oldest first: every WOD with a stored recovery, from sessions (any status) and manual WOD records. `drop` is the stored `recoveryHeartRate2min`, i.e. `recoveryFromHeartRate - recoveryToHeartRate` (bigger is better).
 
 ```json
 [
@@ -132,8 +132,8 @@ Returns `WodRecoveryPoint[]`, oldest first: every WOD that has a `recoveryHeartR
     "sessionId": "…",
     "timeSeconds": 245,
     "rpe": 9,
-    "maxHeartRate": 176,
-    "recoveryHeartRate2min": 142,
+    "fromHeartRate": 176,
+    "toHeartRate": 142,
     "drop": 34
   }
 ]
@@ -212,7 +212,7 @@ Content-Type: application/json
 
 All fields are optional — only provided fields are updated. Returns the updated `ManualWodRecord`.
 
-`rpe` (1–10, steps of 0.5) and `recoveryHeartRate2min` (whole bpm, 30–250) are optional on create and update. They are also optional inside a session's `wod` object.
+`rpe` (1–10, steps of 0.5), `recoveryFromHeartRate` and `recoveryToHeartRate` (whole bpm, 30–250) are optional on create and update, and also inside a session's `wod` object. When both heart rates are present the server computes and stores the drop as `recoveryHeartRate2min = recoveryFromHeartRate - recoveryToHeartRate`, overriding any value sent. Sending only the drop (an older client) is still accepted.
 
 #### Delete Manual Record
 
@@ -326,7 +326,9 @@ Returns `204 No Content`.
   avgHeartRate?: number;
   maxHeartRate?: number;
   rpe?: number;              // Perceived exertion, 1-10 in steps of 0.5
-  recoveryHeartRate2min?: number; // Heart rate (bpm) 2 minutes after finishing (30-250)
+  recoveryFromHeartRate?: number; // Heart rate (bpm) at the end of the WOD (30-250)
+  recoveryToHeartRate?: number;   // Heart rate (bpm) 2 minutes later (30-250)
+  recoveryHeartRate2min?: number; // The drop (From - To). Computed by the server when both are set
 }
 ```
 
@@ -391,7 +393,9 @@ Returns `204 No Content`.
   avgHeartRate?: number;
   maxHeartRate?: number;
   rpe?: number;
-  recoveryHeartRate2min?: number;
+  recoveryFromHeartRate?: number;
+  recoveryToHeartRate?: number;
+  recoveryHeartRate2min?: number;  // the drop (From - To), computed by the server
   date: string;
   notes?: string;
   createdAt: string;
@@ -410,9 +414,9 @@ Returns `204 No Content`.
   recordId?: string;         // when source is 'manual'
   timeSeconds?: number;
   rpe?: number;
-  maxHeartRate?: number;
-  recoveryHeartRate2min: number;
-  drop?: number;             // maxHeartRate - recoveryHeartRate2min
+  fromHeartRate?: number;    // heart rate at the end of the WOD
+  toHeartRate?: number;      // heart rate 2 minutes later
+  drop: number;              // From - To (bigger is better)
 }
 ```
 

@@ -60,7 +60,8 @@ export function registerTools(server: McpServer, api: ApiClient) {
         avgHeartRate: z.number().optional(),
         maxHeartRate: z.number().optional(),
         rpe: z.number().min(1).max(10).optional().describe("Perceived exertion 1-10, steps of 0.5"),
-        recoveryHeartRate2min: z.number().int().min(30).max(250).optional().describe("Heart rate (bpm) 2 minutes after finishing the WOD"),
+        recoveryFromHeartRate: z.number().int().min(30).max(250).optional().describe("Heart rate (bpm) at the end of the WOD (recovery: From)"),
+        recoveryToHeartRate: z.number().int().min(30).max(250).optional().describe("Heart rate (bpm) 2 minutes later (recovery: To). The backend stores the drop (From - To) itself"),
       }).describe("Workout of the Day"),
       notes: z.string().optional(),
     },
@@ -95,7 +96,8 @@ export function registerTools(server: McpServer, api: ApiClient) {
         avgHeartRate: z.number().optional(),
         maxHeartRate: z.number().optional(),
         rpe: z.number().min(1).max(10).optional().describe("Perceived exertion 1-10, steps of 0.5"),
-        recoveryHeartRate2min: z.number().int().min(30).max(250).optional().describe("Heart rate (bpm) 2 minutes after finishing the WOD"),
+        recoveryFromHeartRate: z.number().int().min(30).max(250).optional().describe("Heart rate (bpm) at the end of the WOD (recovery: From)"),
+        recoveryToHeartRate: z.number().int().min(30).max(250).optional().describe("Heart rate (bpm) 2 minutes later (recovery: To). The backend stores the drop (From - To) itself"),
       }).optional(),
       notes: z.string().optional(),
     },
@@ -127,7 +129,7 @@ export function registerTools(server: McpServer, api: ApiClient) {
 
   server.tool(
     "get_wod_recovery",
-    "Get WODs with a measured 2-minute heart-rate recovery (oldest first). drop = max HR minus HR 2 minutes after finishing; a bigger drop means better recovery. Includes RPE, time and WOD name.",
+    "Get WODs with a measured heart-rate recovery (oldest first). drop = From (heart rate at the end of the WOD) minus To (2 minutes later); a bigger drop means better recovery. Includes RPE, time, WOD name and the From / To values.",
     {},
     async () => {
       try { return ok(await api.getWodRecovery()); }
@@ -174,7 +176,8 @@ export function registerTools(server: McpServer, api: ApiClient) {
       avgHeartRate: z.number().optional(),
       maxHeartRate: z.number().optional(),
       rpe: z.number().min(1).max(10).optional().describe("Perceived exertion 1-10, steps of 0.5"),
-      recoveryHeartRate2min: z.number().int().min(30).max(250).optional().describe("Heart rate (bpm) 2 minutes after finishing the WOD"),
+      recoveryFromHeartRate: z.number().int().min(30).max(250).optional().describe("Heart rate (bpm) at the end of the WOD (recovery: From)"),
+      recoveryToHeartRate: z.number().int().min(30).max(250).optional().describe("Heart rate (bpm) 2 minutes later (recovery: To). The backend stores the drop (From - To) itself"),
       date: z.string().describe("Date (YYYY-MM-DD)"),
       notes: z.string().optional(),
     },

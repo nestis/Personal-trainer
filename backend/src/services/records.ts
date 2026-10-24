@@ -226,7 +226,8 @@ export async function getAggregatedStrength(userId: string): Promise<AggregatedE
 }
 
 /**
- * Every WOD with a measured 2-minute heart-rate recovery, oldest first.
+ * Every WOD with a measured heart-rate recovery, oldest first. The drop is the
+ * stored recoveryHeartRate2min (from - to, computed when the WOD is saved).
  * Includes sessions (any status, since the WOD is often filled in before the
  * session is finished) and manual WOD records.
  */
@@ -237,12 +238,10 @@ export async function getWodRecovery(userId: string): Promise<WodRecoveryPoint[]
   ]);
 
   const points: WodRecoveryPoint[] = [];
-  const withDrop = (max: number | undefined, rec: number): number | undefined =>
-    max !== undefined && max > 0 ? max - rec : undefined;
 
   for (const s of sessions) {
-    const rec = s.wod?.recoveryHeartRate2min;
-    if (!rec) continue;
+    const drop = s.wod?.recoveryHeartRate2min;
+    if (drop === undefined) continue;
     points.push({
       date: s.date,
       source: 'session',
@@ -250,15 +249,14 @@ export async function getWodRecovery(userId: string): Promise<WodRecoveryPoint[]
       sessionId: s.id,
       ...(s.wod.timeSeconds !== undefined && { timeSeconds: s.wod.timeSeconds }),
       ...(s.wod.rpe !== undefined && { rpe: s.wod.rpe }),
-      ...(s.wod.maxHeartRate !== undefined && { maxHeartRate: s.wod.maxHeartRate }),
-      recoveryHeartRate2min: rec,
-      ...(withDrop(s.wod.maxHeartRate, rec) !== undefined && { drop: withDrop(s.wod.maxHeartRate, rec) }),
+      ...(s.wod.recoveryFromHeartRate !== undefined && { fromHeartRate: s.wod.recoveryFromHeartRate }),
+      ...(s.wod.recoveryToHeartRate !== undefined && { toHeartRate: s.wod.recoveryToHeartRate }),
+      drop,
     });
   }
 
   for (const r of manual) {
-    if (r.type !== 'wod' || !r.recoveryHeartRate2min) continue;
-    const rec = r.recoveryHeartRate2min;
+    if (r.type !== 'wod' || r.recoveryHeartRate2min === undefined) continue;
     points.push({
       date: r.date,
       source: 'manual',
@@ -266,9 +264,9 @@ export async function getWodRecovery(userId: string): Promise<WodRecoveryPoint[]
       recordId: r.id,
       ...(r.timeSeconds !== undefined && { timeSeconds: r.timeSeconds }),
       ...(r.rpe !== undefined && { rpe: r.rpe }),
-      ...(r.maxHeartRate !== undefined && { maxHeartRate: r.maxHeartRate }),
-      recoveryHeartRate2min: rec,
-      ...(withDrop(r.maxHeartRate, rec) !== undefined && { drop: withDrop(r.maxHeartRate, rec) }),
+      ...(r.recoveryFromHeartRate !== undefined && { fromHeartRate: r.recoveryFromHeartRate }),
+      ...(r.recoveryToHeartRate !== undefined && { toHeartRate: r.recoveryToHeartRate }),
+      drop: r.recoveryHeartRate2min,
     });
   }
 

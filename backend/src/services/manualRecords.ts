@@ -8,7 +8,7 @@ import {
 import { ManualRecord, ManualStrengthPR, ManualWodRecord } from '../types';
 import { v4 as uuidv4 } from 'uuid';
 import { docClient } from './db-client';
-import { estimate1RM } from '../utils/formulas';
+import { estimate1RM, recoveryDrop } from '../utils/formulas';
 
 const TABLE_NAME = process.env.RECORDS_TABLE || 'ManualRecords';
 
@@ -49,11 +49,14 @@ export async function createManualWodRecord(userId: string, input: {
   avgHeartRate?: number;
   maxHeartRate?: number;
   rpe?: number;
+  recoveryFromHeartRate?: number;
+  recoveryToHeartRate?: number;
   recoveryHeartRate2min?: number;
   date: string;
   notes?: string;
 }): Promise<ManualWodRecord> {
   const now = new Date().toISOString();
+  const drop = recoveryDrop(input.recoveryFromHeartRate, input.recoveryToHeartRate) ?? input.recoveryHeartRate2min;
   const record: ManualWodRecord & { userId: string } = {
     id: uuidv4(),
     userId,
@@ -65,7 +68,9 @@ export async function createManualWodRecord(userId: string, input: {
     ...(input.avgHeartRate !== undefined && { avgHeartRate: input.avgHeartRate }),
     ...(input.maxHeartRate !== undefined && { maxHeartRate: input.maxHeartRate }),
     ...(input.rpe !== undefined && { rpe: input.rpe }),
-    ...(input.recoveryHeartRate2min !== undefined && { recoveryHeartRate2min: input.recoveryHeartRate2min }),
+    ...(input.recoveryFromHeartRate !== undefined && { recoveryFromHeartRate: input.recoveryFromHeartRate }),
+    ...(input.recoveryToHeartRate !== undefined && { recoveryToHeartRate: input.recoveryToHeartRate }),
+    ...(drop !== undefined && { recoveryHeartRate2min: drop }),
     date: input.date,
     ...(input.notes !== undefined && { notes: input.notes }),
     createdAt: now,
@@ -87,6 +92,8 @@ export async function updateManualWodRecord(userId: string, id: string, input: {
   avgHeartRate?: number;
   maxHeartRate?: number;
   rpe?: number;
+  recoveryFromHeartRate?: number;
+  recoveryToHeartRate?: number;
   recoveryHeartRate2min?: number;
   date?: string;
   notes?: string;
@@ -106,7 +113,18 @@ export async function updateManualWodRecord(userId: string, id: string, input: {
   if (input.avgHeartRate !== undefined) updates.avgHeartRate = input.avgHeartRate;
   if (input.maxHeartRate !== undefined) updates.maxHeartRate = input.maxHeartRate;
   if (input.rpe !== undefined) updates.rpe = input.rpe;
-  if (input.recoveryHeartRate2min !== undefined) updates.recoveryHeartRate2min = input.recoveryHeartRate2min;
+  if (input.recoveryFromHeartRate !== undefined) updates.recoveryFromHeartRate = input.recoveryFromHeartRate;
+  if (input.recoveryToHeartRate !== undefined) updates.recoveryToHeartRate = input.recoveryToHeartRate;
+  if (input.recoveryFromHeartRate !== undefined || input.recoveryToHeartRate !== undefined) {
+    // the drop follows the (merged) from / to values
+    const drop = recoveryDrop(
+      input.recoveryFromHeartRate ?? existing.recoveryFromHeartRate,
+      input.recoveryToHeartRate ?? existing.recoveryToHeartRate
+    );
+    if (drop !== undefined) updates.recoveryHeartRate2min = drop;
+  } else if (input.recoveryHeartRate2min !== undefined) {
+    updates.recoveryHeartRate2min = input.recoveryHeartRate2min;
+  }
 
   const setParts: string[] = [];
   const removeParts: string[] = [];

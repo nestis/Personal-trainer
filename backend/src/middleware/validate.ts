@@ -1,4 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
+import { recoveryDrop } from '../utils/formulas';
 
 const MAX_STRING_LENGTH = 500;
 const MAX_EXERCISES = 20;
@@ -27,19 +28,38 @@ function isNonNegativeNumber(n: unknown): n is number {
 
 const MAX_HEART_RATE = 250;
 
-/** RPE: 1-10 in steps of 0.5. Recovery: heart rate 2 min after finishing (bpm). */
-export function wodExtrasError(rpe: unknown, recovery: unknown): string | null {
+const isBpm = (n: unknown): boolean =>
+  typeof n === 'number' && Number.isInteger(n) && n >= 30 && n <= MAX_HEART_RATE;
+
+/**
+ * RPE: 1-10 in steps of 0.5. Recovery: "from" and "to" are heart rates (bpm);
+ * the drop (recoveryHeartRate2min) is computed from them, but may also be sent
+ * on its own (e.g. by older clients) as a whole number of bpm.
+ */
+export function wodExtrasError(rpe: unknown, recovery: unknown, from?: unknown, to?: unknown): string | null {
   if (rpe !== undefined) {
     if (typeof rpe !== 'number' || !Number.isFinite(rpe) || rpe < 1 || rpe > 10 || (rpe * 2) % 1 !== 0) {
       return 'rpe must be a number from 1 to 10 in steps of 0.5';
     }
   }
+  if (from !== undefined && !isBpm(from)) {
+    return `recoveryFromHeartRate must be a whole number of bpm (30-${MAX_HEART_RATE})`;
+  }
+  if (to !== undefined && !isBpm(to)) {
+    return `recoveryToHeartRate must be a whole number of bpm (30-${MAX_HEART_RATE})`;
+  }
   if (recovery !== undefined) {
-    if (typeof recovery !== 'number' || !Number.isInteger(recovery) || recovery < 30 || recovery > MAX_HEART_RATE) {
-      return `recoveryHeartRate2min must be a whole number of bpm (30-${MAX_HEART_RATE})`;
+    if (typeof recovery !== 'number' || !Number.isInteger(recovery) || Math.abs(recovery) > MAX_HEART_RATE) {
+      return 'recoveryHeartRate2min must be a whole number of bpm (the drop in heart rate)';
     }
   }
   return null;
+}
+
+/** Returns the WOD with recoveryHeartRate2min = from - to when both are present */
+export function withRecovery<T extends { recoveryFromHeartRate?: unknown; recoveryToHeartRate?: unknown }>(wod: T): T {
+  const drop = recoveryDrop(wod.recoveryFromHeartRate, wod.recoveryToHeartRate);
+  return drop === undefined ? wod : { ...wod, recoveryHeartRate2min: drop };
 }
 
 function validateExerciseSet(set: unknown): string | null {
@@ -75,7 +95,7 @@ function validateWod(wod: unknown): string | null {
   if (w.totalReps !== undefined && !isPositiveNumber(w.totalReps)) return 'wod.totalReps must be positive';
   if (w.avgHeartRate !== undefined && !isPositiveNumber(w.avgHeartRate)) return 'wod.avgHeartRate must be positive';
   if (w.maxHeartRate !== undefined && !isPositiveNumber(w.maxHeartRate)) return 'wod.maxHeartRate must be positive';
-  const extras = wodExtrasError(w.rpe, w.recoveryHeartRate2min);
+  const extras = wodExtrasError(w.rpe, w.recoveryHeartRate2min, w.recoveryFromHeartRate, w.recoveryToHeartRate);
   if (extras) return `wod.${extras}`;
   return null;
 }
@@ -109,7 +129,7 @@ export function validateCreateSession(req: Request, res: Response, next: NextFun
   }
 
   // Strip body to only allowed fields
-  req.body = { date, strength, wod, ...(notes !== undefined && { notes }) };
+  req.body = { date, strength, wod: withRecovery(wod), ...(notes !== undefined && { notes }) };
   next();
 }
 
@@ -148,7 +168,7 @@ export function validateUpdateSession(req: Request, res: Response, next: NextFun
     ...(date !== undefined && { date }),
     ...(status !== undefined && { status }),
     ...(strength !== undefined && { strength }),
-    ...(wod !== undefined && { wod }),
+    ...(wod !== undefined && { wod: withRecovery(wod) }),
     ...(notes !== undefined && { notes }),
   };
   next();
