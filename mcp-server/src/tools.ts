@@ -16,7 +16,8 @@ function fail(err: unknown): ToolResult {
 export function registerTools(server: McpServer, api: ApiClient) {
   server.tool(
     "get_sessions",
-    "List workout sessions with optional date range filter",
+    "List workout sessions with optional date range filter."+
+    " A session's `wod` object can include rpe (1-10), recoveryFromHeartRate (heart rate at the end of the WOD), recoveryToHeartRate (heart rate 2 minutes later) and recoveryHeartRate2min (the heart-rate recovery drop = From - To; bigger is better).",
     {
       startDate: z.string().optional().describe("Start date (YYYY-MM-DD)"),
       endDate: z.string().optional().describe("End date (YYYY-MM-DD)"),
@@ -29,7 +30,8 @@ export function registerTools(server: McpServer, api: ApiClient) {
 
   server.tool(
     "get_session",
-    "Get a single workout session by ID",
+    "Get a single workout session by ID."+
+    " A session's `wod` object can include rpe (1-10), recoveryFromHeartRate (heart rate at the end of the WOD), recoveryToHeartRate (heart rate 2 minutes later) and recoveryHeartRate2min (the heart-rate recovery drop = From - To; bigger is better).",
     { id: z.string().describe("Session ID") },
     async ({ id }) => {
       try { return ok(await api.getSession(id)); }
@@ -73,7 +75,7 @@ export function registerTools(server: McpServer, api: ApiClient) {
 
   server.tool(
     "update_session",
-    "Update a workout session (mark complete, edit exercises, etc.)",
+    "Update a workout session (mark complete, edit exercises, etc.). The wod object REPLACES the whole WOD: when changing the WOD, include the existing rpe, recoveryFromHeartRate and recoveryToHeartRate values (read the session first), or they are removed.",
     {
       id: z.string().describe("Session ID"),
       date: z.string().optional(),
@@ -119,7 +121,7 @@ export function registerTools(server: McpServer, api: ApiClient) {
 
   server.tool(
     "get_wod_records",
-    "Get all WOD (Workout of the Day) records with history",
+    "Get all WOD (Workout of the Day) records with history (best times per named WOD). For RPE and heart-rate recovery use get_wod_recovery or get_sessions.",
     {},
     async () => {
       try { return ok(await api.getWodRecords()); }
@@ -132,14 +134,19 @@ export function registerTools(server: McpServer, api: ApiClient) {
     "Get WODs with a measured heart-rate recovery (oldest first). drop = From (heart rate at the end of the WOD) minus To (2 minutes later); a bigger drop means better recovery. Includes RPE, time, WOD name and the From / To values.",
     {},
     async () => {
-      try { return ok(await api.getWodRecovery()); }
+      try {
+        const points = await api.getWodRecovery();
+        return ok(points.length > 0
+          ? points
+          : "No WOD heart-rate recovery readings are stored yet. They are entered as 'From' (heart rate at the end of the WOD) and 'To' (2 minutes later) on the WOD card, or via recoveryFromHeartRate / recoveryToHeartRate in create_session, update_session or create_wod_record.");
+      }
       catch (e) { return fail(e); }
     },
   );
 
   server.tool(
     "get_manual_records",
-    "Get manual records (user-entered, not derived from sessions)",
+    "Get manual records (user-entered, not derived from sessions). WOD records can include rpe, recoveryFromHeartRate, recoveryToHeartRate and recoveryHeartRate2min (the drop).",
     {
       type: z.enum(["strength", "wod"]).optional().describe("Filter by record type"),
     },
@@ -235,7 +242,7 @@ export function registerTools(server: McpServer, api: ApiClient) {
 
   server.tool(
     "get_training_summary",
-    "Get an aggregated training summary for coaching analysis — sessions per week, volume by exercise, PRs, WOD records, and recovery patterns",
+    "Get an aggregated training summary for coaching analysis — sessions per week, volume by exercise, PRs, WOD records, WOD RPE and heart-rate recovery (From -> To, drop), and rest-day patterns",
     {
       weeks: z.number().default(6).describe("Number of weeks to analyze (default: 6)"),
     },

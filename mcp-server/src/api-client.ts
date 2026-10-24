@@ -212,8 +212,7 @@ export class ApiClient {
     maxHeartRate?: number;
     rpe?: number;
     recoveryFromHeartRate?: number;
-  recoveryToHeartRate?: number;
-  recoveryHeartRate2min?: number; // the drop (From - To), computed by the backend
+    recoveryToHeartRate?: number;
     date: string;
     notes?: string;
   }): Promise<ManualRecord> {
@@ -264,10 +263,11 @@ export class ApiClient {
     start.setDate(start.getDate() - weeks * 7);
     const startDate = start.toISOString().split('T')[0];
 
-    const [sessions, strengthPRs, wodRecords] = await Promise.all([
+    const [sessions, strengthPRs, wodRecords, recoveryPoints] = await Promise.all([
       this.listSessions(startDate, endDate),
       this.getStrengthPRs(),
       this.getWodRecords(),
+      this.getWodRecovery().catch(() => [] as WodRecoveryPoint[]),
     ]);
 
     const completed = sessions.filter(s => s.status === 'completed');
@@ -354,6 +354,48 @@ export class ApiClient {
       }
     }
 
+    // WOD effort (RPE) and heart-rate recovery
+    type WodEffort = { date: string; name: string; rpe?: number; from?: number; to?: number; drop?: number };
+    const efforts = new Map<string, WodEffort>();
+    for (const s of sessions) {
+      const w = s.wod;
+      if (!w || (w.rpe === undefined && w.recoveryHeartRate2min === undefined)) continue;
+      efforts.set(`${s.date}|${(w.name || 'WOD').toLowerCase()}`, {
+        date: s.date,
+        name: w.name || 'WOD',
+        rpe: w.rpe,
+        from: w.recoveryFromHeartRate,
+        to: w.recoveryToHeartRate,
+        drop: w.recoveryHeartRate2min,
+      });
+    }
+    for (const p of recoveryPoints) {
+      if (p.date < startDate || p.date > endDate) continue;
+      const key = `${p.date}|${p.name.toLowerCase()}`;
+      if (!efforts.has(key)) {
+        efforts.set(key, { date: p.date, name: p.name, rpe: p.rpe, from: p.fromHeartRate, to: p.toHeartRate, drop: p.drop });
+      }
+    }
+    if (efforts.size > 0) {
+      const list = [...efforts.values()].sort((a, b) => a.date.localeCompare(b.date));
+      lines.push('');
+      lines.push('### WOD Effort & Heart-Rate Recovery');
+      lines.push('Recovery = heart rate at the end of the WOD (From) minus 2 minutes later (To); a bigger drop is better.');
+      for (const e of list) {
+        const parts: string[] = [];
+        if (e.rpe !== undefined) parts.push(`RPE ${e.rpe}`);
+        if (e.drop !== undefined) {
+          const range = e.from !== undefined && e.to !== undefined ? ` (${e.from} → ${e.to})` : '';
+          parts.push(`recovery -${e.drop} bpm${range}`);
+        }
+        lines.push(`- ${e.date} **${e.name}**: ${parts.join(', ')}`);
+      }
+      const drops = list.map(e => e.drop).filter((d): d is number => d !== undefined);
+      const rpes = list.map(e => e.rpe).filter((r): r is number => r !== undefined);
+      if (drops.length > 0) lines.push(`- Average recovery drop: ${(drops.reduce((a, b) => a + b, 0) / drops.length).toFixed(1)} bpm over ${drops.length} WOD(s)`);
+      if (rpes.length > 0) lines.push(`- Average WOD RPE: ${(rpes.reduce((a, b) => a + b, 0) / rpes.length).toFixed(1)}`);
+    }
+
     // Rest day analysis
     if (completed.length > 1) {
       const dates = completed.map(s => s.date).sort();
@@ -376,7 +418,7 @@ export class ApiClient {
       }
 
       lines.push('');
-      lines.push('### Recovery');
+      lines.push('### Rest Days & Consecutive Training');
       lines.push(`- Max consecutive training days: ${maxConsecutive}`);
       if (restDays.length > 0) {
         const avgRest = restDays.reduce((a, b) => a + b, 0) / restDays.length;
