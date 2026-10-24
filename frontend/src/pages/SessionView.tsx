@@ -12,7 +12,7 @@ import ConfirmDialog from '../components/ConfirmDialog';
 import { useToast } from '../hooks/useToast';
 
 type SaveState = 'idle' | 'saving' | 'saved' | 'error';
-type Focus = { exId: string; idx: number } | 'none' | null; // null = automatic
+type Focus = { exId: string; idx: number } | null; // the set being edited, if any
 
 const s: Record<string, React.CSSProperties> = {
   page: {
@@ -254,14 +254,6 @@ function startTimeFor(id: string): number {
   }
 }
 
-function firstIncompleteSet(exercises: Exercise[]): { exId: string; idx: number } | null {
-  for (const ex of exercises) {
-    const idx = ex.sets.findIndex((st) => !st.completed);
-    if (idx !== -1) return { exId: ex.id, idx };
-  }
-  return null;
-}
-
 function wodHasContent(w: WOD): boolean {
   return Boolean(w.name || w.description || w.timeSeconds || w.totalReps || w.avgHeartRate || w.maxHeartRate);
 }
@@ -407,14 +399,12 @@ function SessionView() {
     setFocus({ exId, idx: ex.sets.length });
   };
 
+  // A set only opens for editing when tapped; ticking it never opens it
   const active = useMemo(() => {
-    if (focus === 'none') return null;
-    if (focus) {
-      const ex = exercises.find((e) => e.id === focus.exId);
-      if (ex && ex.sets[focus.idx]) return focus;
-    }
-    return isPlanned ? firstIncompleteSet(exercises) : null;
-  }, [focus, exercises, isPlanned]);
+    if (!focus) return null;
+    const ex = exercises.find((e) => e.id === focus.exId);
+    return ex && ex.sets[focus.idx] ? focus : null;
+  }, [focus, exercises]);
 
   const lastTime = (name: string): string | null => {
     const h = history.find((e) => e.exercise.toLowerCase() === name.trim().toLowerCase());
@@ -434,7 +424,7 @@ function SessionView() {
     try {
       const updated = await api.updateSession(id, { status });
       setSession(updated);
-      setFocus('none');
+      setFocus(null);
       showToast(status === 'completed' ? 'Marked as completed' : 'Moved back to planned');
     } catch {
       showToast('Failed to update session.', 'error');
@@ -595,7 +585,7 @@ function SessionView() {
                     <Stepper label="Reps" value={st.reps} onChange={(v) => patchSet(ex.id, i, { reps: v }, st.completed)} />
                     <Stepper label="Weight (kg)" value={st.kilos} step={2.5} decimal onChange={(v) => patchSet(ex.id, i, { kilos: v }, st.completed)} />
                     {st.completed ? (
-                      <button type="button" className="btn btn-secondary btn-block" style={{ height: 44, marginTop: 8, padding: 0 }} onClick={() => setFocus('none')}>
+                      <button type="button" className="btn btn-secondary btn-block" style={{ height: 44, marginTop: 8, padding: 0 }} onClick={() => setFocus(null)}>
                         Done
                       </button>
                     ) : (
